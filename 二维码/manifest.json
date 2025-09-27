@@ -1,11 +1,10 @@
 {
   "manifest_version": 3,
-  "short_name": "完美二维码",
-  "name": "完美二维码 - 极简又全能",
+  "name": "二维码",
   "version": "1.0.0",
-  "author": "WHO",
-  "description": "快速生成和识别二维码",
-  "homepage_url": "https://github.com/WHO/qrcode-extension",
+  "author": "sherlocknieh",
+  "description": "生成和识别二维码",
+  "homepage_url": "https://github.com/sherlocknieh/Browser-Extensions",
 
   "permissions": ["contextMenus", "storage", "activeTab"],
 

@@ -1,20 +1,15 @@
-// 已在 html 中全局引入 qrcode 库
+// 已在 html 中引入 qrcode 库, 全局可用
 
 
-// 打开 Popup 时获取当前标签页 URL 并生成二维码
+// 等待 Popup 内容加载完成并开始工作
 document.addEventListener('DOMContentLoaded', async () => {
-
-  // 首先检查是否有来自右键菜单的文本需要生成二维码
   chrome.storage.local.get(['qrCodeText'], (result) => {
-
+  // 检查本地储存
     if (result.qrCodeText) {
-      // 如果有存储的文本，优先生成该文本的二维码
-      console.log('从右键菜单获取文本:', result.qrCodeText);
+      // 有相应数据则生成二维码
       generateQRCode(result.qrCodeText);
-
-      // 使用后清除存储的文本
+      // 使用后清除存储的数据
       chrome.storage.local.remove('qrCodeText');
-
     } else {
       // 否则生成当前页面URL的二维码
       chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
@@ -26,6 +21,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 });
+
 
 // 二维码生成函数
 function generateQRCode(text) {
