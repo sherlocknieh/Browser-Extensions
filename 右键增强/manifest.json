@@ -1,11 +1,10 @@
 {
   "manifest_version": 3,
-  "short_name": "快捷搜图",
-  "name": "极简以图搜图工具",
+  "name": "右键增强",
   "version": "1.0.0",
-  "author": "WHO",
-  "description": "快速以图搜图的Chrome扩展，支持多个搜索引擎",
-  "homepage_url": "https://github.com/WHO/image-search-extension",
+  "author": "sherlocknieh",
+  "description": "补充官方右键缺失的一些功能",
+  "homepage_url": "https://github.com/sherlocknieh/Browser-Extensions",
 
   "permissions": ["contextMenus", "storage", "sidePanel"],
 
