@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "short_name": "快捷搜图",
+  "name": "极简以图搜图工具",
+  "version": "1.0.0",
+  "author": "WHO",
+  "description": "快速以图搜图的Chrome扩展，支持多个搜索引擎",
+  "homepage_url": "https://github.com/WHO/image-search-extension",
+
+  "permissions": ["contextMenus", "storage", "sidePanel"],
+
+  "icons": {
+    "16": "assets/icon.png",
+    "48": "assets/icon.png",
+    "128": "assets/icon.png"
+  },
+  
+  "options_page": "options/options.html",
+
+  "side_panel": {
+    "default_path": "options/options.html"
+  },
+
+  "background": {
+    "service_worker": "main.js"
+  }
+}

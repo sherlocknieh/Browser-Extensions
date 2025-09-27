@@ -1,0 +1,39 @@
+{
+  "manifest_version": 3,
+  "short_name": "完美二维码",
+  "name": "完美二维码 - 极简又全能",
+  "version": "1.0.0",
+  "author": "WHO",
+  "description": "快速生成和识别二维码",
+  "homepage_url": "https://github.com/WHO/qrcode-extension",
+
+  "permissions": ["contextMenus", "storage", "activeTab"],
+
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "assets/icon.png",
+      "48": "assets/icon.png",
+      "128": "assets/icon.png"
+    }
+  },
+
+  "icons": {
+    "16": "assets/icon.png",
+    "48": "assets/icon.png",
+    "128": "assets/icon.png"
+  },
+
+  "background": {
+    "service_worker": "background.js"
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": [
+        "libs/jsQR.js",
+        "content.js"]
+    }
+  ]
+}
