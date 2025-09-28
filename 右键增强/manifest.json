@@ -6,21 +6,21 @@
   "description": "补充官方右键缺失的一些功能",
   "homepage_url": "https://github.com/sherlocknieh/Browser-Extensions",
 
-  "permissions": ["contextMenus", "storage", "sidePanel"],
-
-  "icons": {
-    "16": "images/icon.png",
-    "48": "images/icon.png",
-    "128": "images/icon.png"
-  },
+  "permissions": ["contextMenus", "storage", "sidePanel", "activeTab"],
   
   "options_page": "options/options.html",
 
-  "side_panel": {
-    "default_path": "options/options.html"
+  "background": {
+    "service_worker": "background.js"
   },
 
-  "background": {
-    "service_worker": "main.js"
-  }
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": [
+        "libs/sweetalert2.all.min.js",
+        "content.js"]
+    }
+  ]
+
 }
