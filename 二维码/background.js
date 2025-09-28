@@ -29,6 +29,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 function createContextMenus() {
     // 清理旧菜单
     chrome.contextMenus.removeAll(() => {
+        
         // 创建二维码识别菜单
         chrome.contextMenus.create({
             id: "decodeQR",
