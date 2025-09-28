@@ -13,7 +13,9 @@ function QRCodeReader(imageUrl) {
 
     LoadImage(imageUrl)             // 获取图片数据
     .then(imageData => {
-        decodeQRCode(imageData);    // 解析二维码
+        setTimeout(() => {
+            decodeQRCode(imageData);    // 解析二维码
+        }, 100); // 给 DOM 更新留出时间
     })
     .catch(error => {
         alert("图片数据获取失败: " + error.message);
@@ -23,10 +25,8 @@ function QRCodeReader(imageUrl) {
 
 // 图片数据加载函数
 async function LoadImage(imageUrl) {
-    // 检查是否跨域
-    const isCrossOrigin = new URL(imageUrl).origin !== window.location.origin;
-    
-    if (!isCrossOrigin) {
+    // 检查是否跨域（本地文件 file: 链接视为跨域）
+    if (!imageUrl.startsWith('file:') && new URL(imageUrl).origin === window.location.origin) {
     // 未跨域：直接获取
         const img = document.createElement('img');
         img.src = imageUrl;
@@ -59,12 +59,12 @@ async function LoadImage(imageUrl) {
         const div = document.createElement('div');
         div.id = 'qr-loading-msg';
         div.style.cssText = `
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            position: fixed; bottom: 10%; right: 10%; transform: translate(+50%, +50%);
             z-index:50; background: yellow; font-size: 14px; padding: 1em; border-radius: 5px; 
         `;
         div.innerHTML = `
             <span style="display: inline-block; margin-right: 8px; animation: spin 1s linear infinite;">⟳</span>
-            跨域图片, 获取数据可能较慢
+            跨域图片, 数据获取可能略慢
         `;
         
         // 添加旋转动画样式
@@ -122,6 +122,6 @@ function decodeQRCode(imageData) {
             window.open(urlToOpen, '_blank'); // 在新标签页中打开
         }
     } else {
-        alert("未识别到二维码");
+        alert("未发现二维码");
     }
 }
