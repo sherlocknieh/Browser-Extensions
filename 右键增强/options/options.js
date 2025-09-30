@@ -1,186 +1,182 @@
-// 默认搜图引擎配置
-const DEFAULT_ENGINES = [
-  {
-    name: 'Google',
-    url: 'https://www.google.com/searchbyimage?image_url={imageUrl}'
-  },
-  {
-    name: 'Yandex',
-    url: 'https://yandex.com/images/search?rpt=imageview&url={imageUrl}'
-  }
-];
+// 页面加载时初始化
+document.addEventListener('DOMContentLoaded', function() {
+    loadEngines();
+    
+    // 添加事件监听器
+    const addEngineBtn = document.getElementById('addEngineBtn');
+    if (addEngineBtn) {
+        addEngineBtn.addEventListener('click', addEngine);
+    }
+});
 
-// DOM 元素
-const searchEnginesContainer = document.getElementById('search-engines-container');
-const addEngineButton = document.getElementById('add-engine');
-const saveSettingsButton = document.getElementById('save-settings');
-const resetSettingsButton = document.getElementById('reset-settings');
-const useDefaultEnginesCheckbox = document.getElementById('use-default-engines');
-const defaultEngineSelect = document.getElementById('default-engine');
-const statusMessage = document.getElementById('status-message');
-const searchEngineTemplate = document.getElementById('search-engine-template');
+// 加载搜图引擎列表
+function loadEngines() {
+    chrome.runtime.sendMessage({ action: 'getCustomImageSearchEngines' }, (response) => {
+        if (response && response.engines) {
+            displayEngines(response.engines);
+        }
+    });
+}
 
-// 初始化设置页面
-function initOptions() {
-  // 加载保存的设置
-  chrome.storage.sync.get({
-    searchEngines: [],
-    useDefaultEngines: true,
-    defaultEngine: 'Google'
-  }, function(items) {
-    // 显示用户自定义的搜图引擎
-    if (items.searchEngines && items.searchEngines.length > 0) {
-      items.searchEngines.forEach(engine => addSearchEngineItem(engine.name, engine.url));
+// 显示搜索引擎列表
+function displayEngines(engines) {
+    const enginesList = document.getElementById('enginesList');
+    
+    if (engines.length === 0) {
+        enginesList.innerHTML = '<p style="color: #666;">暂无自定义搜图引擎</p>';
+        return;
     }
     
-    // 设置是否使用默认搜图引擎
-    useDefaultEnginesCheckbox.checked = items.useDefaultEngines;
+    enginesList.innerHTML = engines.map(engine => `
+        <div class="engine-item">
+            <div class="engine-info">
+                <div class="engine-name">${escapeHtml(engine.name)}</div>
+                <div class="engine-url">${escapeHtml(engine.url)}</div>
+            </div>
+            <div>
+                <button data-engine-id="${engine.id}" data-enabled="${engine.enabled}" class="toggle-btn">
+                    ${engine.enabled ? '禁用' : '启用'}
+                </button>
+                <button class="delete-btn" data-engine-id="${engine.id}">删除</button>
+            </div>
+        </div>
+    `).join('');
     
-    // 填充默认搜图引擎下拉列表
-    populateDefaultEngineSelect(items.defaultEngine);
-  });
-  
-  // 添加事件监听器
-  addEngineButton.addEventListener('click', () => addSearchEngineItem());
-  saveSettingsButton.addEventListener('click', saveOptions);
-  resetSettingsButton.addEventListener('click', resetOptions);
+    // 为动态生成的按钮添加事件监听器
+    addEngineEventListeners();
 }
 
-// 添加搜图引擎项
-function addSearchEngineItem(name = '', url = '') {
-  const template = searchEngineTemplate.content.cloneNode(true);
-  const engineItem = template.querySelector('.search-engine-item');
-  
-  const nameInput = engineItem.querySelector('.engine-name');
-  const urlInput = engineItem.querySelector('.engine-url');
-  const removeButton = engineItem.querySelector('.remove-engine');
-  
-  nameInput.value = name;
-  urlInput.value = url;
-  
-  removeButton.addEventListener('click', function() {
-    engineItem.remove();
-  });
-  
-  searchEnginesContainer.appendChild(engineItem);
-}
-
-// 填充默认搜图引擎下拉列表
-function populateDefaultEngineSelect(selectedEngine) {
-  // 清空现有选项
-  defaultEngineSelect.innerHTML = '';
-  
-  // 添加用户自定义引擎
-  const userEngines = getUserEngines();
-  userEngines.forEach(engine => {
-    const option = document.createElement('option');
-    option.value = engine.name;
-    option.textContent = engine.name;
-    defaultEngineSelect.appendChild(option);
-  });
-  
-  // 如果启用了默认引擎，也添加它们
-  if (useDefaultEnginesCheckbox.checked) {
-    DEFAULT_ENGINES.forEach(engine => {
-      // 检查是否已经存在同名引擎
-      if (!userEngines.some(e => e.name === engine.name)) {
-        const option = document.createElement('option');
-        option.value = engine.name;
-        option.textContent = engine.name;
-        defaultEngineSelect.appendChild(option);
-      }
-    });
-  }
-  
-  // 设置选中的引擎
-  if (selectedEngine && defaultEngineSelect.querySelector(`option[value="${selectedEngine}"]`)) {
-    defaultEngineSelect.value = selectedEngine;
-  } else if (defaultEngineSelect.options.length > 0) {
-    defaultEngineSelect.selectedIndex = 0;
-  }
-}
-
-// 获取用户自定义的搜图引擎
-function getUserEngines() {
-  const engines = [];
-  const engineItems = searchEnginesContainer.querySelectorAll('.search-engine-item');
-  
-  engineItems.forEach(item => {
-    const name = item.querySelector('.engine-name').value.trim();
-    const url = item.querySelector('.engine-url').value.trim();
+// 添加新的搜图引擎
+function addEngine() {
+    const name = document.getElementById('engineName').value.trim();
+    const url = document.getElementById('engineUrl').value.trim();
     
-    if (name && url) {
-      engines.push({ name, url });
+    if (!name || !url) {
+        showStatus('请填写搜图引擎名称和链接', 'error');
+        return;
     }
-  });
-  
-  return engines;
-}
-
-// 保存设置
-function saveOptions() {
-  const userEngines = getUserEngines();
-  const useDefaultEngines = useDefaultEnginesCheckbox.checked;
-  const defaultEngine = defaultEngineSelect.value;
-  
-  // 验证至少有一个搜图引擎
-  if (userEngines.length === 0 && !useDefaultEngines) {
-    showStatusMessage('请至少添加一个搜图引擎或启用默认搜图引擎', 'error');
-    return;
-  }
-  
-  // 保存设置到 Chrome 存储
-  chrome.storage.sync.set({
-    searchEngines: userEngines,
-    useDefaultEngines: useDefaultEngines,
-    defaultEngine: defaultEngine
-  }, function() {
-    showStatusMessage('设置已保存', 'success');
     
-    // 更新默认引擎下拉列表
-    populateDefaultEngineSelect(defaultEngine);
-  });
-}
-
-// 重置为默认设置
-function resetOptions() {
-  if (confirm('确定要恢复默认设置吗？这将删除所有自定义搜图引擎。')) {
-    // 清空自定义搜图引擎
-    searchEnginesContainer.innerHTML = '';
+    if (!url.includes('%s')) {
+        showStatus('搜图链接必须包含 %s 占位符', 'error');
+        return;
+    }
     
-    // 恢复默认设置
-    useDefaultEnginesCheckbox.checked = true;
-    
-    // 重新填充默认引擎下拉列表
-    populateDefaultEngineSelect('Google');
-    
-    // 保存默认设置
-    chrome.storage.sync.set({
-      searchEngines: [],
-      useDefaultEngines: true,
-      defaultEngine: 'Google'
-    }, function() {
-      showStatusMessage('已恢复默认设置', 'success');
+    // 获取现有引擎列表
+    chrome.runtime.sendMessage({ action: 'getCustomImageSearchEngines' }, (response) => {
+        const engines = response?.engines || [];
+        
+        // 创建新引擎
+        const newEngine = {
+            id: Date.now().toString(),
+            name: name,
+            url: url,
+            enabled: true
+        };
+        
+        engines.push(newEngine);
+        
+        // 保存到storage
+        chrome.runtime.sendMessage({ 
+            action: 'saveCustomImageSearchEngines', 
+            engines: engines 
+        }, (response) => {
+            if (response?.success) {
+                showStatus('搜图引擎添加成功', 'success');
+                document.getElementById('engineName').value = '';
+                document.getElementById('engineUrl').value = '';
+                loadEngines(); // 重新加载列表
+            } else {
+                showStatus('添加失败，请重试', 'error');
+            }
+        });
     });
-  }
+}
+
+// 切换搜图引擎启用状态
+function toggleEngine(id, enabled) {
+    chrome.runtime.sendMessage({ action: 'getCustomImageSearchEngines' }, (response) => {
+        const engines = response?.engines || [];
+        const engine = engines.find(e => e.id === id);
+        
+        if (engine) {
+            engine.enabled = enabled;
+            
+            chrome.runtime.sendMessage({ 
+                action: 'saveCustomImageSearchEngines', 
+                engines: engines 
+            }, (response) => {
+                if (response?.success) {
+                    showStatus(`搜图引擎已${enabled ? '启用' : '禁用'}`, 'success');
+                    loadEngines();
+                }
+            });
+        }
+    });
+}
+
+// 删除搜图引擎
+function deleteEngine(id) {
+    if (!confirm('确定要删除这个搜图引擎吗？')) {
+        return;
+    }
+    
+    chrome.runtime.sendMessage({ action: 'getCustomImageSearchEngines' }, (response) => {
+        const engines = response?.engines || [];
+        const filteredEngines = engines.filter(e => e.id !== id);
+        
+        chrome.runtime.sendMessage({ 
+            action: 'saveCustomImageSearchEngines', 
+            engines: filteredEngines 
+        }, (response) => {
+            if (response?.success) {
+                showStatus('搜图引擎删除成功', 'success');
+                loadEngines();
+            }
+        });
+    });
 }
 
 // 显示状态消息
-function showStatusMessage(message, type) {
-  statusMessage.textContent = message;
-  statusMessage.className = 'status-message ' + type;
-  
-  // 3秒后隐藏消息
-  setTimeout(() => {
-    statusMessage.className = 'status-message';
-  }, 3000);
+function showStatus(message, type) {
+    const status = document.getElementById('status');
+    status.innerHTML = `<div class="status ${type}">${message}</div>`;
+    
+    // 3秒后自动隐藏
+    setTimeout(() => {
+        status.innerHTML = '';
+    }, 3000);
 }
 
-// 当默认引擎选项改变时更新下拉列表
-useDefaultEnginesCheckbox.addEventListener('change', function() {
-  const currentDefault = defaultEngineSelect.value;
-  populateDefaultEngineSelect(currentDefault);
-});
+// 为动态生成的按钮添加事件监听器
+function addEngineEventListeners() {
+    // 为切换按钮添加事件监听器
+    const toggleBtns = document.querySelectorAll('.toggle-btn');
+    toggleBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const engineId = this.dataset.engineId;
+            const enabled = this.dataset.enabled === 'true';
+            toggleEngine(engineId, !enabled);
+        });
+    });
+    
+    // 为删除按钮添加事件监听器
+    const deleteBtns = document.querySelectorAll('.delete-btn');
+    deleteBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const engineId = this.dataset.engineId;
+            deleteEngine(engineId);
+        });
+    });
+}
 
-// 初始化页面
-document.addEventListener('DOMContentLoaded', initOptions);
+// HTML转义函数，防止XSS
+function escapeHtml(text) {
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+}

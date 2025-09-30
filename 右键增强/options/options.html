@@ -1,66 +1,141 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <title>图片助手设置</title>
-  <link rel="stylesheet" href="options.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>右键增强 - 设置</title>
+    <style>
+        body {margin: 0;}
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+    
+        .section {
+            margin: 30px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #f9f9f9;
+        }
+
+
+        .form-group {
+            margin: 15px 0;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        
+        .help-text {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .engine-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: white;
+        }
+        
+        .engine-info {
+            flex: 1;
+        }
+        
+        .engine-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .engine-url {
+            font-size: 12px;
+            color: #666;
+            word-break: break-all;
+        }
+
+        button {
+            background: #007cba;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #005a87;
+        }
+        
+        .delete-btn {
+            background: #dc3545;
+        }
+        
+        .delete-btn:hover {
+            background: #c82333;
+        }
+        
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+    </style>
 </head>
 <body>
-  <div class="container">
-    <h1>图片助手设置</h1>
-    
-    <div class="section">
-      <h2>搜图引擎设置</h2>
-      <p class="description">添加或修改您想要使用的搜图引擎。URL中使用 {imageUrl} 作为图片URL的占位符。</p>
-      
-      <div id="search-engines-container">
-        <!-- 搜图引擎列表将通过JavaScript动态添加 -->
-      </div>
-      
-      <div class="actions">
-        <button id="add-engine" class="btn btn-primary">添加搜图引擎</button>
-      </div>
+    <div class="container">
+        <h1>设置</h1>
+        
+        <div class="section">
+            <h2>引擎列表</h2>
+            <div id="enginesList">
+                <!-- 动态加载的搜图引擎列表 -->
+            </div>
+            <div class="form-group">
+                <label for="engineName">搜图引擎名称:</label>
+                <input type="text" id="engineName" placeholder="例如: 百度识图">
+            </div>
+            <div class="form-group">
+                <label for="engineUrl">搜图链接:</label>
+                <input type="url" id="engineUrl" placeholder="例如: https://graph.baidu.com/details?isfromtusoupc=1&tn=pc&carousel=0&promotion_name=pc_image_shitu&extUiData%5bisLogoShow%5d=1&image=%s">
+                <div class="help-text">使用 %s 作为图片URL的占位符</div>
+            </div>
+            <button id="addEngineBtn">添加搜图引擎</button>
+        </div>
+
+        <div id="status"></div>
     </div>
-    
-    <div class="section">
-      <h2>默认设置</h2>
-      <div class="form-group">
-        <label>
-          <input type="checkbox" id="use-default-engines">
-          同时保留默认搜图引擎
-        </label>
-      </div>
-      <div class="form-group">
-        <label for="default-engine">默认搜图引擎：</label>
-        <select id="default-engine">
-          <!-- 选项将通过JavaScript动态添加 -->
-        </select>
-      </div>
-    </div>
-    
-    <div class="actions">
-      <button id="save-settings" class="btn btn-success">保存设置</button>
-      <button id="reset-settings" class="btn btn-danger">恢复默认设置</button>
-    </div>
-    
-    <div id="status-message" class="status-message"></div>
-  </div>
-  
-  <!-- 搜图引擎项模板 -->
-  <template id="search-engine-template">
-    <div class="search-engine-item">
-      <div class="form-group">
-        <input type="text" class="engine-name" placeholder="引擎名称 (例如: Google)">
-      </div>
-      <div class="form-group">
-        <input type="text" class="engine-url" placeholder="搜索URL (例如: https://www.google.com/searchbyimage?image_url={imageUrl})">
-      </div>
-      <div class="form-group">
-        <button class="remove-engine btn btn-small btn-danger">删除</button>
-      </div>
-    </div>
-  </template>
-  
-  <script src="options.js"></script>
+
+    <script src="options.js"></script>
 </body>
 </html>

@@ -6,8 +6,14 @@
   "description": "补充官方右键缺失的一些功能",
   "homepage_url": "https://github.com/sherlocknieh/Browser-Extensions",
 
-  "permissions": ["contextMenus", "storage", "sidePanel", "activeTab"],
+  "permissions": ["contextMenus", "storage", "activeTab"],
   
+  "icons": {
+    "16": "images/icon.png",
+    "48": "images/icon.png",
+    "128": "images/icon.png"
+  },
+
   "options_page": "options/options.html",
 
   "background": {

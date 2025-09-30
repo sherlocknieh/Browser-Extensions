@@ -8,19 +8,14 @@
 
   "permissions": ["contextMenus", "storage", "activeTab"],
 
-  "action": {
-    "default_popup": "popup/popup.html",
-    "default_icon": {
-      "16": "images/icon.png",
-      "48": "images/icon.png",
-      "128": "images/icon.png"
-    }
-  },
-
   "icons": {
     "16": "images/icon.png",
     "48": "images/icon.png",
     "128": "images/icon.png"
+  },
+
+  "action": {
+    "default_popup": "popup/popup.html"
   },
 
   "background": {
