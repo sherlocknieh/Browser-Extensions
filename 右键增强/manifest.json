@@ -23,8 +23,9 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
+      "css": ["libs/toastify.css"],
       "js": [
-        "libs/sweetalert2.all.min.js",
+        "libs/toastify.js",
         "content.js"]
     }
   ]

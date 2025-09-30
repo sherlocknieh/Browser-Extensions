@@ -1,22 +1,21 @@
 // 已在 html 中引入 qrcode 库, 全局可用
 
 
-document.addEventListener('DOMContentLoaded', async () => {
 // 等待 Popup 页面加载完成后开始工作
-  chrome.storage.local.get(['qrCodeText'], (result) => {
+document.addEventListener('DOMContentLoaded', async () => {
   // 检查本地储存是否存在 qrCodeText 数据
-    if (result.qrCodeText) {
-      // 有则生成其二维码
-      generateQRCode(result.qrCodeText);
-      // 使用后清除存储的数据
-      chrome.storage.local.remove('qrCodeText');
-    } else {
-      // 否则生成当前页面URL的二维码
-      chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
-          generateQRCode(tabs[0].url);
-      });
-    }
-  });
+  const result = await chrome.storage.local.get(['qrCodeText']);
+  if (result.qrCodeText) {
+    // 有则生成其二维码
+    generateQRCode(result.qrCodeText);
+    // 使用后清除存储的数据
+    await chrome.storage.local.remove('qrCodeText');
+  }
+  else {
+    // 否则生成当前页面URL的二维码
+    const tabs = await chrome.tabs.query({active: true, currentWindow: true});
+    generateQRCode(tabs[0].url);
+  }
 });
 
 

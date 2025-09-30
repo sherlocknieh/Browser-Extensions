@@ -1,0 +1,539 @@
+/**
+ * 右键增强扩展 - 选项页面样式
+ * 作者: sherlocknieh
+ * 描述: 为选项页面提供简洁、现代的用户界面样式
+ */
+
+/* ========================================
+   基础样式 - 页面布局和容器
+   ======================================== */
+
+/**
+ * 页面主体样式
+ * 移除默认边距，创建干净的基础布局
+ */
+body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    line-height: 1.6;
+    color: #333;
+    background-color: #f5f5f5;
+}
+
+/**
+ * 主容器
+ * 限制最大宽度并居中显示，提供良好的阅读体验
+ */
+.container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: #fff;
+    min-height: 100vh;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+/**
+ * 页面主标题
+ * 为页面提供清晰的标题样式
+ */
+h1 {
+    color: #2c3e50;
+    margin-bottom: 30px;
+    border-bottom: 2px solid #3498db;
+    padding-bottom: 10px;
+}
+
+/* ========================================
+   内容区域样式
+   ======================================== */
+
+/**
+ * 功能区块容器
+ * 每个功能模块的包装容器，提供清晰的分组效果
+ */
+.section {
+    margin: 30px 0;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #f9f9f9;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/**
+ * 区块标题
+ * 为每个功能区块提供标题样式
+ */
+.section h2 {
+    margin-top: 0;
+    color: #34495e;
+    border-bottom: 1px solid #bdc3c7;
+    padding-bottom: 8px;
+}
+
+/* ========================================
+   表单样式 - 输入框和标签
+   ======================================== */
+
+/**
+ * 表单组容器
+ * 为表单元素提供统一的间距和布局
+ */
+.form-group {
+    margin: 15px 0;
+}
+
+/**
+ * 表单标签
+ * 统一的标签样式，提供清晰的字段说明
+ */
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+/**
+ * 输入框和选择框样式
+ * 统一的表单元素外观，包括文本框、URL框、数字框和下拉选择框
+ */
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-sizing: border-box;
+    font-size: 14px;
+    transition: border-color 0.3s ease;
+    background-color: #fff;
+}
+
+/**
+ * 数字输入框特殊样式
+ * 为数字输入框提供合适的宽度
+ */
+.form-group input[type="number"] {
+    width: 150px;
+}
+
+/**
+ * 输入框和选择框聚焦状态
+ * 提供清晰的聚焦反馈
+ */
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+/**
+ * 帮助文本
+ * 为用户提供额外的使用说明
+ */
+.help-text {
+    font-size: 12px;
+    color: #666;
+    margin-top: 5px;
+    font-style: italic;
+}
+
+/* ========================================
+   引擎列表样式
+   ======================================== */
+
+/**
+ * 引擎列表容器
+ * 为引擎列表提供基础样式
+ */
+#enginesList {
+    margin-bottom: 20px;
+}
+
+/**
+ * 引擎条目
+ * 每个搜索引擎的容器样式
+ */
+.engine-item {
+    margin: 5px 0;
+    padding: 8px;
+    border-bottom: 1px solid #eee;
+    transition: background-color 0.2s ease;
+}
+
+/**
+ * 引擎条目悬停效果
+ * 提供交互反馈
+ */
+.engine-item:hover {
+    background-color: #f8f9fa;
+}
+
+/**
+ * 引擎条目标签
+ * 包含复选框、名称和操作按钮的容器
+ */
+.engine-item label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    margin: 0;
+    font-weight: normal;
+}
+
+/**
+ * 复选框样式
+ * 统一的复选框样式，包括引擎列表和设置选项
+ */
+.engine-item input[type="checkbox"],
+.form-group input[type="checkbox"] {
+    margin-right: 10px;
+    width: auto;
+    cursor: pointer;
+}
+
+/**
+ * 复选框标签样式
+ * 为包含复选框的标签提供适当的布局
+ */
+.form-group label input[type="checkbox"] {
+    margin-right: 8px;
+}
+
+/**
+ * 引擎图标
+ * 显示搜索引擎的emoji图标
+ */
+.engine-icon {
+    margin-right: 5px;
+    font-size: 16px;
+}
+
+/**
+ * 引擎名称
+ * 显示搜索引擎名称，占用剩余空间
+ */
+.engine-name {
+    flex: 1;
+    font-weight: normal;
+    padding: 0 10px;
+}
+
+/**
+ * 内置引擎样式
+ * 为内置引擎提供特殊的背景色
+ */
+.builtin-engine {
+    background-color: #f0f8ff;
+    border-left: 3px solid #3498db;
+}
+
+/**
+ * 内置引擎标签
+ * 显示"内置"标识
+ */
+.builtin-badge {
+    background: #3498db;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    margin-left: 8px;
+}
+
+/* ========================================
+   按钮样式
+   ======================================== */
+
+/**
+ * 通用按钮样式
+ * 所有按钮的基础样式定义
+ */
+button {
+    background: #3498db;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin: 5px;
+    font-size: 14px;
+    font-weight: 500;
+    transition: background-color 0.3s ease, transform 0.1s ease;
+}
+
+/**
+ * 按钮悬停效果
+ * 提供清晰的交互反馈
+ */
+button:hover {
+    background: #2980b9;
+    transform: translateY(-1px);
+}
+
+/**
+ * 按钮按下效果
+ * 提供点击反馈
+ */
+button:active {
+    transform: translateY(0);
+}
+
+/**
+ * 编辑按钮样式
+ * 相对较小的编辑按钮，适合在列表项中使用
+ */
+.edit-btn {
+    margin-left: 10px;
+    padding: 4px 8px;
+    font-size: 12px;
+    background: #f39c12;
+    min-width: auto;
+}
+
+/**
+ * 编辑按钮悬停效果
+ */
+.edit-btn:hover {
+    background: #e67e22;
+}
+
+/**
+ * 删除按钮样式
+ * 危险操作的红色按钮样式
+ */
+.delete-btn {
+    background: #e74c3c;
+    margin-left: 5px;
+    padding: 4px 8px;
+    font-size: 12px;
+    min-width: auto;
+}
+
+/**
+ * 删除按钮悬停效果
+ * 更深的红色表示危险操作
+ */
+.delete-btn:hover {
+    background: #c0392b;
+}
+
+/**
+ * 取消按钮样式
+ * 次要操作的灰色按钮样式
+ */
+#cancelEditBtn {
+    background: #95a5a6;
+}
+
+/**
+ * 取消按钮悬停效果
+ */
+#cancelEditBtn:hover {
+    background: #7f8c8d;
+}
+
+/**
+ * 配置管理按钮容器
+ * 为配置导入导出按钮提供布局
+ */
+.config-actions {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+}
+
+/**
+ * 配置管理按钮样式
+ * 统一的配置操作按钮外观
+ */
+.config-btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    background: #27ae60;
+    color: white;
+}
+
+/**
+ * 配置按钮悬停效果
+ */
+.config-btn:hover {
+    background: #219a52;
+    transform: translateY(-1px);
+}
+
+/**
+ * 导入按钮特殊样式
+ * 因为是label包装的文件输入
+ */
+.import-btn {
+    display: inline-block;
+    background: #3498db;
+    margin: 0;
+}
+
+.import-btn:hover {
+    background: #2980b9;
+}
+
+/**
+ * 危险操作按钮样式
+ * 重置等危险操作的红色样式
+ */
+.danger-btn {
+    background: #e74c3c;
+}
+
+.danger-btn:hover {
+    background: #c0392b;
+}
+
+/* ========================================
+   状态消息样式
+   ======================================== */
+
+/**
+ * 状态消息基础样式
+ * 用于显示操作结果的消息容器
+ */
+.status {
+    padding: 12px 16px;
+    border-radius: 4px;
+    margin: 15px 0;
+    font-weight: 500;
+    border-left: 4px solid;
+}
+
+/**
+ * 成功状态样式
+ * 绿色主题，表示操作成功
+ */
+.status.success {
+    background: #d4edda;
+    color: #155724;
+    border-color: #27ae60;
+    border-left-color: #27ae60;
+}
+
+/**
+ * 错误状态样式
+ * 红色主题，表示操作失败或错误
+ */
+.status.error {
+    background: #f8d7da;
+    color: #721c24;
+    border-color: #e74c3c;
+    border-left-color: #e74c3c;
+}
+
+/* ========================================
+   响应式设计
+   ======================================== */
+
+/**
+ * 移动设备适配
+ * 在小屏幕设备上调整布局
+ */
+@media (max-width: 768px) {
+    .container {
+        margin: 0;
+        padding: 10px;
+        box-shadow: none;
+    }
+    
+    .section {
+        margin: 20px 0;
+        padding: 15px;
+    }
+    
+    button {
+        padding: 8px 16px;
+        font-size: 13px;
+    }
+    
+    .engine-item label {
+        flex-wrap: wrap;
+    }
+    
+    .edit-btn,
+    .delete-btn {
+        margin-top: 5px;
+    }
+}
+
+/**
+ * 超小屏幕适配
+ * 进一步优化小屏幕体验
+ */
+@media (max-width: 480px) {
+    .container {
+        padding: 5px;
+    }
+    
+    h1 {
+        font-size: 1.5em;
+    }
+    
+    .section h2 {
+        font-size: 1.2em;
+    }
+    
+    button {
+        width: 100%;
+        margin: 5px 0;
+    }
+    
+    .edit-btn,
+    .delete-btn {
+        width: auto;
+        margin: 2px;
+    }
+}
+
+/* ========================================
+   无障碍访问优化
+   ======================================== */
+
+/**
+ * 聚焦可见性增强
+ * 为键盘导航用户提供更清晰的聚焦指示
+ */
+button:focus,
+input:focus {
+    outline: 2px solid #3498db;
+    outline-offset: 2px;
+}
+
+/**
+ * 高对比度模式支持
+ * 在高对比度模式下保持可用性
+ */
+@media (prefers-contrast: high) {
+    .section {
+        border-width: 2px;
+    }
+    
+    button {
+        border: 2px solid currentColor;
+    }
+}
+
+/**
+ * 减少动画偏好支持
+ * 尊重用户的动画偏好设置
+ */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        transition: none !important;
+        animation: none !important;
+    }
+}
