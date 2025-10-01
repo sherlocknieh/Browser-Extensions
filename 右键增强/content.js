@@ -52,13 +52,13 @@ function getLinkText(Element) {
 
 // 显示Toast提示
 function showToast(text, icon = 'success') {
-    // 使用 Toastify 显示 Toast
+    // 用 Toastify 显示 Toast
     Toastify({
         text: text,
-        duration: 3000,
+        duration: 4000,
         close: true,
-        gravity: 'top',
-        position: 'right',
+        gravity: 'bottom',
+        position: 'center',
         style: { background: icon === 'success' ? '#43d477' : (icon === 'error' ? '#e74c3c' : '#f1c40f') },
         stopOnFocus: true
     }).showToast();
