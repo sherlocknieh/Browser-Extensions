@@ -30,32 +30,29 @@ function createContextMenus() {
     // 清理旧菜单
     chrome.contextMenus.removeAll(() => {
         
-        // 创建二维码识别菜单
+        // 创建页面URL生成二维码菜单
         chrome.contextMenus.create({
-            id: "decodeQR",
-            title: "识别图中二维码",
-            contexts: ["image"]
+            id: "generateQR_page",
+            title: "当前页面二维码",
+            contexts: ["page"]
         });
-
-        // 创建选中文字生成二维码菜单
-        chrome.contextMenus.create({
-            id: "generateQR_selection",
-            title: "选中文字生成二维码",
-            contexts: ["selection"]
-        });
-
         // 创建链接生成二维码菜单
         chrome.contextMenus.create({
             id: "generateQR_link",
             title: "链接生成二维码",
             contexts: ["link"]
         });
-
-        // 创建页面URL生成二维码菜单
+        // 创建选中文字生成二维码菜单
         chrome.contextMenus.create({
-            id: "generateQR_page",
-            title: "当前页面生成二维码",
-            contexts: ["page"]
+            id: "generateQR_selection",
+            title: "选中文字生成二维码",
+            contexts: ["selection"]
+        });
+        // 创建二维码识别菜单
+        chrome.contextMenus.create({
+            id: "decodeQR",
+            title: "识别图中二维码",
+            contexts: ["image"]
         });
     });
 }

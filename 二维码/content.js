@@ -13,17 +13,14 @@ function QRCodeReader(imageUrl) {
 
     LoadImage(imageUrl)             // 获取图片数据
     .then(imageData => {
-        setTimeout(() => {
-            decodeQRCode(imageData);    // 解析二维码
-        }, 100); // 给 DOM 更新留出时间
+        decodeQRCode(imageData);    // 解析二维码
     })
     .catch(error => {
         Swal.fire({
             icon: 'error',
             title: '图片获取失败',
             text: error.message,
-            confirmButtonText: '确定'
-        });
+        });                         // 显示错误信息
     });
 }
 
@@ -41,12 +38,16 @@ async function LoadImage(imageUrl) {
         });
         return imgToData(img);
     } else {
-    // 跨域：通过 background 代理
+    // 跨域：通过 background 代理获取
+        const loadingToast = Swal.fire({
+            icon: 'info',
+            title: '正在获取图片数据...',
+            text: '跨域图片，数据获取可能略慢',
+            didOpen: () => {Swal.showLoading();}
+        });
         return new Promise((resolve, reject) => {
-            const loadingMsg = showLoadingMessage();      // 显示加载中提示
             // 向 background 发起消息
             chrome.runtime.sendMessage({action: "fetchImage", url: imageUrl}, (response) => {
-                hideLoadingMessage(loadingMsg);           // 完成后隐藏提示
                 if (response && response.success) {
                     const img = new Image();
                     img.onload = () => resolve(imgToData(img));
@@ -55,32 +56,9 @@ async function LoadImage(imageUrl) {
                 } else {
                     reject(new Error(response?.error || "代理获取失败"));
                 }
+                loadingToast.close();
             });
         });
-    }
-    
-    // 辅助函数：显示加载提示
-    function showLoadingMessage() {
-        const toast = Swal.fire({
-            title: '正在获取图片数据...',
-            text: '跨域图片，数据获取可能略慢',
-            icon: 'info',
-            toast: true,
-            position: 'bottom-end',
-            showConfirmButton: false,
-            timerProgressBar: true,
-            didOpen: () => {
-                Swal.showLoading();
-            }
-        });
-        return toast;
-    }
-    
-    // 辅助函数：隐藏加载提示
-    function hideLoadingMessage(toast) {
-        if (toast) {
-            toast.close();
-        }
     }
     
     // 辅助函数：从图片元素获取图片数据
@@ -96,56 +74,33 @@ async function LoadImage(imageUrl) {
 
 
 // 二维码解析函数
-function decodeQRCode(imageData) {
+async function decodeQRCode(imageData) {
 
-    // 解析二维码
-    let code = jsQR(imageData.data, imageData.width, imageData.height, {
-        inversionAttempts: "attemptBoth"    // 支持反转色
-    });
-    
+    const code = jsQR(imageData.data, imageData.width, imageData.height, {
+        inversionAttempts: "attemptBoth"});   // 支持反转色
+
     if (code) {
         const result = code.data;
-        
         Swal.fire({
-            title: '二维码解析成功',
-            text: result,
             icon: 'success',
+            title: '识别成功',
+            text: result,
             showCancelButton: true,
             confirmButtonText: '打开链接',
-            cancelButtonText: '取消',
-            input: 'url',
-            inputValue: result,
-            inputLabel: '链接地址：',
-            showLoaderOnConfirm: true,
-            preConfirm: (url) => {
-                if (!url) {
-                    Swal.showValidationMessage('请输入有效的链接地址');
-                    return false;
-                }
-                
-                let urlToOpen = url;
-                if (!url.startsWith('http://') && !url.startsWith('https://')) {
-                    urlToOpen = 'https://' + url;
-                }
-                
-                try {
-                    new URL(urlToOpen);
-                    return urlToOpen;
-                } catch {
-                    Swal.showValidationMessage('链接格式不正确');
-                    return false;
-                }
-            }
-        }).then((result) => {
-            if (result.isConfirmed && result.value) {
-                window.open(result.value, '_blank');
+            cancelButtonText: '复制链接'
+        }).then((res) => {
+            if (res.isConfirmed) {
+                const url = result.startsWith('http') ? result : 'https://' + result;
+                window.open(url, '_blank');
+            } else if (res.dismiss === Swal.DismissReason.cancel) {
+                navigator.clipboard.writeText(result);
             }
         });
     } else {
         Swal.fire({
             icon: 'warning',
-            title: '未发现二维码',
-            text: '请尝试选择包含二维码的图片',
+            title: '识别失败',
+            text: '未检测到二维码',
             confirmButtonText: '确定'
         });
     }
