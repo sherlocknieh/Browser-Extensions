@@ -92,10 +92,12 @@ function initializeSortable() {
 
     // 只对实际的引擎项启用拖拽（不包括最后一个用于新增的表单）
     const options = {
-        // 取消 handle，使整行均可拖拽
+        // 取消 handle，使整行均可拖拽；只允许非 non-draggable 的项被拖拽
         animation: 150,
-        // 仅过滤新增表单中的输入，避免触发拖拽
-        filter: '.new-engine-input, #new-engine-name, #new-engine-url',
+        draggable: '.engine-item:not(.non-draggable)',
+        // 过滤所有 input/textarea（包括新增行），并且不要 preventDefault，以便输入框能正常聚焦和输入
+        filter: 'input, textarea, .new-engine-input, #new-engine-name, #new-engine-url',
+        preventOnFilter: false,
         onEnd: function(evt) {
             // 计算真实索引（排除最后的新增表单）
             const items = Array.from(listEl.querySelectorAll('.engine-item'));
@@ -354,7 +356,29 @@ function createEngineItem(engine, index) {
     checkbox.type = 'checkbox';
     checkbox.className = 'engine-checkbox';
     checkbox.checked = engine.enabled;
-    checkbox.addEventListener('change', onConfigChange);
+    checkbox.addEventListener('change', function() {
+        // 立即保存该项的 enabled 状态到 storage
+        chrome.storage.local.get('imageSearchEngines', (result) => {
+            const engines = result.imageSearchEngines || [];
+            const idx = index;
+            if (idx >= 0 && idx < engines.length) {
+                engines[idx].enabled = checkbox.checked;
+                engines[idx].updatedAt = Date.now();
+                // 合并并写回（简单策略：覆盖该索引）
+                chrome.storage.local.set({ imageSearchEngines: engines }, () => {
+                    originalConfig = JSON.parse(JSON.stringify(engines));
+                    hasChanges = false;
+                    updateSaveButtonState();
+                    showStatus('已保存启用状态', 'success');
+                    // 重新渲染以保持索引和 DOM 一致
+                    loadEngines();
+                });
+            } else {
+                // 如果找不到对应项，回退到整体变更检测
+                onConfigChange();
+            }
+        });
+    });
     
     // 引擎名称输入框
     const nameInput = document.createElement('input');
@@ -397,6 +421,8 @@ function createEngineItem(engine, index) {
 function createNewEngineForm() {
     const engineItem = document.createElement('div');
     engineItem.className = 'engine-item';
+    // 新增行不应参与拖拽
+    engineItem.classList.add('non-draggable');
     
     const label = document.createElement('label');
     
