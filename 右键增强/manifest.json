@@ -26,6 +26,7 @@
       "css": ["libs/toastify.css"],
       "js": [
         "libs/toastify.js",
+        "libs/Sortable.min.js",
         "content.js"]
     }
   ]

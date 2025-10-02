@@ -43,7 +43,87 @@ function loadEngines() {
         // 创建添加新引擎的表单
         const newEngineForm = createNewEngineForm();
         enginesList.appendChild(newEngineForm);
+
+        // 初始化 Sortable （只在有多于1项时）
+        initializeSortable();
     });
+}
+
+// 纯函数：重排数组（便于单元测试）
+function reorderArray(arr, fromIndex, toIndex) {
+    const len = arr.length;
+    if (fromIndex < 0 || fromIndex >= len || toIndex < 0 || toIndex >= len || fromIndex === toIndex) {
+        return arr.slice();
+    }
+    const res = arr.slice();
+    const [item] = res.splice(fromIndex, 1);
+    res.splice(toIndex, 0, item);
+    return res;
+}
+
+// 防抖保存到 storage
+let saveTimer = null;
+function saveEnginesDebounced() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+        const currentConfig = getCurrentConfiguration();
+        // 增加 updatedAt 字段
+        const now = Date.now();
+        currentConfig.forEach(item => item.updatedAt = now);
+        chrome.storage.local.set({ imageSearchEngines: currentConfig }, () => {
+            originalConfig = JSON.parse(JSON.stringify(currentConfig));
+            hasChanges = false;
+            updateSaveButtonState();
+            showStatus('配置已保存（自动）', 'success');
+        });
+    }, 500);
+}
+
+// 上移/下移操作已移除，使用拖拽手柄进行排序
+
+// 初始化 Sortable
+let sortableInstance = null;
+function initializeSortable() {
+    const listEl = document.getElementById('enginesList');
+    if (!listEl) return;
+
+    // 若已初始化，则销毁后重建（避免重复绑定）
+    try { if (sortableInstance) sortableInstance.destroy(); } catch (e) {}
+
+    // 只对实际的引擎项启用拖拽（不包括最后一个用于新增的表单）
+    const options = {
+        // 取消 handle，使整行均可拖拽
+        animation: 150,
+        // 仅过滤新增表单中的输入，避免触发拖拽
+        filter: '.new-engine-input, #new-engine-name, #new-engine-url',
+        onEnd: function(evt) {
+            // 计算真实索引（排除最后的新增表单）
+            const items = Array.from(listEl.querySelectorAll('.engine-item'));
+            const engineItems = items.filter((el, idx) => !el.querySelector('.new-engine-input'));
+            const oldIndex = evt.oldIndex;
+            const newIndex = evt.newIndex;
+
+            // 如果拖拽到了新增表单的位置，忽略
+            if (oldIndex === newIndex) return;
+
+            // 从 storage 读取并重排
+            chrome.storage.local.get('imageSearchEngines', (result) => {
+                const engines = result.imageSearchEngines || [];
+                const adjustedOld = oldIndex;
+                const adjustedNew = newIndex;
+                const newArr = reorderArray(engines, adjustedOld, adjustedNew);
+                // 更新 updatedAt
+                const now = Date.now();
+                newArr.forEach(item => item.updatedAt = now);
+                chrome.storage.local.set({ imageSearchEngines: newArr }, () => {
+                    showStatus('顺序已保存', 'success');
+                    loadEngines();
+                });
+            });
+        }
+    };
+
+    sortableInstance = Sortable.create(listEl, options);
 }
 
 // 存储原始配置，用于检测变化
@@ -301,8 +381,8 @@ function createEngineItem(engine, index) {
     deleteBtn.addEventListener('click', function() {
         deleteEngine(index);
     });
-    
-    // 组合元素
+
+    // 组合元素（移除上移/下移按钮，整行可拖拽）
     const buttonWrapper = document.createElement('div');
     buttonWrapper.className = 'engine-item-buttons';
     buttonWrapper.appendChild(deleteBtn);
