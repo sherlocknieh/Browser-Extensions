@@ -66,7 +66,7 @@ function addEventListeners() {
 
 // 导出配置
 function exportConfig() {
-    // 获取所有相关配置
+    // 读取配置数据
     chrome.storage.local.get('imageSearchEngines', (result) => {
         const config = {
             version: '1.0',
@@ -74,26 +74,15 @@ function exportConfig() {
             imageSearchEngines: result.imageSearchEngines || [],
         };
         
-        // 创建下载链接
+        // 创建json文件
         const configJson = JSON.stringify(config, null, 2);
         const blob = new Blob([configJson], { type: 'application/json' });
 
-
+        // 下载保存文件
         chrome.downloads.download({
             url: URL.createObjectURL(blob),
             filename: `右键增强配置.${new Date().toISOString().slice(0, 19).replace('T', '_').replace(/:/g, '-')}.json`,
             saveAs: true
-        }, (downloadId) => {
-            if (chrome.runtime.lastError) {
-                // 用户取消或者其他错误
-                if (chrome.runtime.lastError.message.includes('cancelled')) {
-                    showStatus('导出已取消', 'info');
-                } else {
-                    showStatus(`配置导出失败: ${chrome.runtime.lastError.message}`, 'error');
-                }
-            }
-            // 成功启动下载后，不再此处显示成功消息，
-            // 而是由 background.js 监听下载完成事件来显示。
         });
     });
 }

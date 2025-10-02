@@ -100,7 +100,7 @@ async function decodeQRCode(imageData) {
         Swal.fire({
             icon: 'warning',
             title: '识别失败',
-            text: '未检测到二维码',
+            text: '未发现有效二维码',
             confirmButtonText: '确定'
         });
     }
