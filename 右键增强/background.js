@@ -1,4 +1,4 @@
-// 默认引擎列表
+// 默认引擎数据
 function DefaultEngines() {
     return [
         {
@@ -14,13 +14,17 @@ function DefaultEngines() {
     ];
 }
 
-// 初始化
-chrome.runtime.onInstalled.addListener(() => {
-    // 写入默认配置
-    chrome.storage.local.set({imageSearchEngines: DefaultEngines()});
+
+// 扩展安装时初始化 (扩展安装/更新/重新启用时都会触发)
+chrome.runtime.onInstalled.addListener((details) => {
+    // 只在首次安装时设置默认配置，避免覆盖用户配置
+    if (details.reason === 'install') {
+        chrome.storage.local.set({imageSearchEngines: DefaultEngines()});
+    }
     // 创建右键菜单
     createContextMenus();
 });
+
 
 // 监听存储变化，自动更新右键菜单
 chrome.storage.onChanged.addListener((changes, namespace) => {
@@ -29,6 +33,7 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
         createContextMenus();
     }
 });
+
 
 // 监听菜单点击
 chrome.contextMenus.onClicked.addListener((info, tab) => {
@@ -39,13 +44,24 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 
 // 创建右键菜单
 function createContextMenus() {
-    // 清理旧菜单
+    // 清理旧菜单并重新创建
     chrome.contextMenus.removeAll(() => {
+        createMenuItems();
+    });
+}
+
+// 创建菜单项的具体逻辑
+function createMenuItems() {
+    try {
         // 复制链接文字菜单
         chrome.contextMenus.create({
             id: "copyLinkText",
             title: "复制链接文字",
             contexts: ["link"]
+        }, () => {
+            if (chrome.runtime.lastError) {
+                console.log('创建复制链接菜单:', chrome.runtime.lastError.message);
+            }
         });
 
         // 图片搜索菜单
@@ -53,42 +69,68 @@ function createContextMenus() {
             id: "searchImage",
             title: "图片搜索",
             contexts: ["image"]
+        }, () => {
+            if (chrome.runtime.lastError) {
+                console.log('创建图片搜索菜单:', chrome.runtime.lastError.message);
+            } else {
+                // 只有在主菜单创建成功后才创建子菜单
+                createImageSubMenus();
+            }
         });
+    } catch (error) {
+        console.error('创建菜单时发生错误:', error);
+    }
+}
 
-        // 一键搜图选项
-        chrome.contextMenus.create({
-            id: "searchImageAll",
-            title: "🔍 一键搜索",
-            contexts: ["image"],
-            parentId: "searchImage"
-        });
+// 创建图片搜索子菜单
+function createImageSubMenus() {
+    // 一键搜图选项
+    chrome.contextMenus.create({
+        id: "searchImageAll",
+        title: "🔍 一键搜索",
+        contexts: ["image"],
+        parentId: "searchImage"
+    }, () => {
+        if (chrome.runtime.lastError) {
+            console.log('创建一键搜索菜单:', chrome.runtime.lastError.message);
+        }
+    });
 
-        // 分隔符
-        chrome.contextMenus.create({
-            id: "Separator",
-            type: "separator",
-            contexts: ["image"],
-            parentId: "searchImage"
-        });
+    // 分隔符
+    chrome.contextMenus.create({
+        id: "imageSeparator",
+        type: "separator",
+        contexts: ["image"],
+        parentId: "searchImage"
+    }, () => {
+        if (chrome.runtime.lastError) {
+            console.log('创建分隔符:', chrome.runtime.lastError.message);
+        }
+    });
 
-        // 添加搜图引擎
-        chrome.storage.local.get(['imageSearchEngines'], (result) => {
-            const engines = result.imageSearchEngines || DefaultEngines();
-            engines.forEach(engine => {
-                if (engine.enabled) {
-                    chrome.contextMenus.create({
-                        id: engine.name,
-                        title: engine.name,
-                        contexts: ["image"],
-                        parentId: "searchImage"
-                    });
-                }
-            });
+    // 添加搜图引擎
+    chrome.storage.local.get(['imageSearchEngines'], (result) => {
+        const engines = result.imageSearchEngines || DefaultEngines();
+        engines.forEach((engine, index) => {
+            if (engine.enabled) {
+                const menuId = `engine-${index}-${engine.name}`;
+                chrome.contextMenus.create({
+                    id: menuId,
+                    title: engine.name,
+                    contexts: ["image"],
+                    parentId: "searchImage"
+                }, () => {
+                    if (chrome.runtime.lastError) {
+                        console.log(`创建引擎菜单 ${engine.name}:`, chrome.runtime.lastError.message);
+                    }
+                });
+            }
         });
     });
 }
 
-// 右键菜单响应函数
+
+// 右键菜单操作处理
 function handleContextMenuClick(info, tab) {
     // 复制链接文字
     if (info.menuItemId === "copyLinkText") {
@@ -108,13 +150,33 @@ function handleContextMenuClick(info, tab) {
     }
 }
 
-// 处理单个引擎搜图
+
+// 单个引擎搜图
 function handleSingleEngineSearch(menuItemId, imageUrl) {
     chrome.storage.local.get(['imageSearchEngines'], (result) => {
         // 获取所有引擎列表
         const engines = result.imageSearchEngines || DefaultEngines();
-        // 查找对应引擎
-        const engine = engines.find(e => e.name === menuItemId);
+        
+        let engine = null;
+        
+        // 检查是否是新格式的ID (engine-index-name)
+        if (menuItemId.startsWith('engine-')) {
+            const parts = menuItemId.split('-');
+            if (parts.length >= 3) {
+                const index = parseInt(parts[1]);
+                const engineName = parts.slice(2).join('-');
+                
+                // 优先通过索引查找，如果索引无效则通过名称查找
+                engine = engines[index];
+                if (!engine || engine.name !== engineName) {
+                    engine = engines.find(e => e.name === engineName);
+                }
+            }
+        } else {
+            // 兼容旧格式，直接通过名称查找
+            engine = engines.find(e => e.name === menuItemId);
+        }
+        
         if (engine) {
             // 构造搜索URL
             const searchUrl = engine.url.replace('%s', encodeURIComponent(imageUrl));
@@ -124,7 +186,8 @@ function handleSingleEngineSearch(menuItemId, imageUrl) {
     });
 }
 
-// 处理一键搜图
+
+// 一键搜图
 function handleAllEnginesSearch(imageUrl) {
     chrome.storage.local.get(['imageSearchEngines'], (result) => {
         // 获取所有搜图引擎
@@ -159,15 +222,7 @@ function handleAllEnginesSearch(imageUrl) {
 
 // 设置页面消息处理
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    // 读取配置
-    if (request.action === 'getImageSearchEngines') {
-        chrome.storage.local.get(['imageSearchEngines'], (result) => {
-            sendResponse({ engines: result.imageSearchEngines || DefaultEngines() });
-        });
-        return true;
-    }
-    // 重置配置
-    else if (request.action === 'resetToDefaults') {
+    if (request.action === 'resetToDefaults') {
         const defaultSettings = {
             imageSearchEngines: DefaultEngines()
         };

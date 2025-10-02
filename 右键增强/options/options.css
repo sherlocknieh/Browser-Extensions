@@ -1,0 +1,317 @@
+/* 右键增强扩展 - 设置页面样式 */
+
+/* =============================================== */
+/*                  CSS变量定义区域                  */
+/* =============================================== */
+
+:root {                                              /* CSS变量定义区域 */
+    --primary-color: #6a5acd;                       /* 主色调 - 蓝紫色 */
+    --primary-hover: #5a4cad;                       /* 主色调悬停状态 - 深蓝紫色 */
+    --success-color: #20c997;                       /* 成功色调 - 青绿色 */
+    --success-hover: #1baa80;                       /* 成功色调悬停状态 - 深青绿色 */
+    --danger-color: #e63946;                        /* 危险色调 - 红色 */
+    --danger-hover: #d62839;                        /* 危险色调悬停状态 - 深红色 */
+    --gray-color: #6c757d;                          /* 灰色调 - 用于次要元素 */
+    
+    --bg-color: #f4f7f9;                            /* 页面背景色 - 浅灰蓝色 */
+    --surface-color: #ffffff;                       /* 表面背景色 - 纯白色 */
+    --border-color: #e9ecef;                        /* 边框颜色 - 浅灰色 */
+    --text-color: #343a40;                          /* 文本颜色 - 深灰色 */
+    
+    --success-bg: rgba(32, 201, 151, 0.1);          /* 成功状态背景 - 半透明青绿色 */
+    --error-bg: rgba(230, 57, 70, 0.1);             /* 错误状态背景 - 半透明红色 */
+}
+
+/* =============================================== */
+/*                   基础样式区域                    */
+/* =============================================== */
+
+*, *::before, *::after {                            /* 通用选择器 */
+    box-sizing: border-box;                         /* 使padding和border包含在元素宽高内 */
+}
+
+body {                                              /* 页面主体样式 */
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; /* 系统字体栈 */
+    background-color: var(--bg-color);             /* 设置页面背景色 */
+    color: var(--text-color);                      /* 设置默认文本颜色 */
+    margin: 0;                                     /* 移除默认外边距 */
+    padding: 24px;                                 /* 设置页面内边距 */
+    line-height: 1.5;                             /* 设置行高为1.5倍 */
+}
+
+.container {                                        /* 主容器样式 */
+    max-width: 800px;                              /* 最大宽度800px */
+    margin: 0 auto;                                /* 水平居中 */
+    background-color: var(--surface-color);       /* 设置容器背景为白色 */
+    padding: 32px;                                 /* 容器内边距 */
+    border-radius: 8px;                           /* 圆角8px */
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);    /* 添加阴影效果 */
+}
+
+h1 {                                               /* 主标题样式 */
+    text-align: center;                           /* 文本居中 */
+    margin: 0 0 32px 0;                          /* 上0 右0 下32px 左0 */
+    font-weight: 600;                            /* 字体粗细为600 */
+}
+
+/* =============================================== */
+/*                  引擎列表样式区域                   */
+/* =============================================== */
+
+#enginesList {                                      /* 引擎列表容器 */
+    margin-bottom: 24px;                           /* 下外边距24px */
+    border: 1px solid var(--border-color);        /* 1px实线边框 */
+    border-radius: 8px;                           /* 圆角8px */
+    padding: 16px;                                /* 内边距16px */
+}
+
+.engine-item {                                     /* 单个引擎项样式 */
+    display: flex;                                /* 弹性布局 */
+    align-items: center;                          /* 垂直居中对齐 */
+    margin-bottom: 12px;                          /* 下外边距12px */
+    padding: 8px;                                 /* 内边距8px */
+    border-radius: 6px;                          /* 圆角6px */
+    transition: background-color 0.2s;           /* 背景色过渡动画0.2秒 */
+}
+
+.engine-item:hover {                               /* 引擎项悬停效果 */
+    background-color: rgba(0, 0, 0, 0.02);       /* 悬停时淡灰色背景 */
+}
+
+.engine-item label {                               /* 引擎项标签样式 */
+    display: flex;                                /* 弹性布局 */
+    align-items: center;                          /* 垂直居中对齐 */
+    width: 100%;                                  /* 占满宽度 */
+    gap: 12px;                                    /* 子元素间距12px */
+}
+
+/* =============================================== */
+/*                  输入框样式区域                   */
+/* =============================================== */
+
+input[type="text"] {                                 /* 文本输入框通用样式 */
+    padding: 10px 12px;                           /* 内边距 上下10px 左右12px */
+    border: 1px solid var(--border-color);       /* 1px实线边框 */
+    border-radius: 6px;                          /* 圆角6px */
+    font-size: 14px;                             /* 字体大小14px */
+    transition: border-color 0.2s;               /* 边框颜色过渡动画0.2秒 */
+}
+
+/* URL输入框才使用flex-grow */
+.engine-url {                                      /* URL输入框样式 */
+    flex-grow: 1;                                 /* 占据剩余空间 */
+}
+
+input[type="text"]:focus {                         /* 输入框聚焦状态 */
+    outline: none;                                /* 移除默认聚焦轮廓 */
+    border-color: var(--primary-color);          /* 边框变为主色调 */
+}
+
+input[type="text"][readonly] {                     /* 只读输入框样式 */
+    background-color: var(--bg-color);           /* 背景色为页面背景色 */
+    color: var(--gray-color);                    /* 文字颜色为灰色 */
+}
+
+.engine-checkbox {                                 /* 引擎启用复选框样式 */
+    width: 18px;                                  /* 宽度18px */
+    height: 18px;                                 /* 高度18px */
+    accent-color: var(--primary-color);          /* 选中颜色为主色调 */
+    cursor: pointer;                              /* 鼠标指针为手形 */
+    box-sizing: border-box;                       /* 盒模型为border-box */
+    margin: 0;                                    /* 移除默认外边距 */
+}
+
+
+/* =============================================== */
+/*                  新增引擎样式区域                   */
+/* =============================================== */
+
+.add-engine-icon {                                 /* 新增引擎的加号图标 */
+    width: 18px;                                  /* 宽度18px */
+    height: 18px;                                 /* 高度18px */
+    display: flex;                                /* 弹性布局 */
+    align-items: center;                          /* 垂直居中对齐 */
+    justify-content: center;                      /* 水平居中对齐 */
+    font-size: 14px;                              /* 字体大小14px */
+    font-weight: bold;                            /* 字体加粗 */
+    color: var(--success-color);                 /* 文字颜色为成功色 */
+    border: 2px solid var(--success-color);      /* 2px实线边框 */
+    border-radius: 50%;                          /* 圆形(50%圆角) */
+    background-color: var(--surface-color);     /* 背景色为白色 */
+    cursor: pointer;                             /* 鼠标指针为手形 */
+    transition: all 0.2s;                       /* 所有属性过渡动画0.2秒 */
+    box-sizing: border-box;                      /* 盒模型为border-box */
+    margin: 0;                                   /* 移除外边距 */
+}
+
+.add-engine-icon:hover {                           /* 加号图标悬停效果 */
+    background-color: var(--success-color);     /* 背景色变为绿色 */
+    color: var(--surface-color);                /* 文字颜色变为白色 */
+}
+
+
+/* =============================================== */
+/*                   按钮样式区域                    */
+/* =============================================== */
+
+button, .config-btn {                               /* 按钮通用样式 */
+    padding: 10px 16px;                           /* 内边距 上下10px 左右16px */
+    border: none;                                 /* 移除边框 */
+    border-radius: 6px;                          /* 圆角6px */
+    color: white;                                /* 文字颜色为白色 */
+    font-size: 14px;                             /* 字体大小14px */
+    font-weight: 500;                            /* 字体粗细500 */
+    cursor: pointer;                             /* 鼠标指针为手形 */
+    transition: background-color 0.2s;           /* 背景色过渡动画0.2秒 */
+    white-space: nowrap;                         /* 不换行 */
+}
+
+.engine-item-buttons {                             /* 引擎项按钮容器 */
+    display: flex;                                /* 弹性布局 */
+    gap: 8px;                                     /* 子元素间距8px */
+    min-width: 40px;                              /* 最小宽度40px */
+    justify-content: flex-end;                    /* 右对齐 */
+    align-items: center;                          /* 垂直居中对齐 */
+}
+
+
+
+.icon-btn {                                        /* 圆形图标按钮样式 */
+    width: 32px;                                  /* 宽度32px */
+    height: 32px;                                 /* 高度32px */
+    border-radius: 50%;                           /* 圆形(50%圆角) */
+    display: flex;                                /* 弹性布局 */
+    align-items: center;                          /* 垂直居中对齐 */
+    justify-content: center;                      /* 水平居中对齐 */
+    font-size: 16px;                              /* 字体大小16px */
+    font-weight: bold;                            /* 字体加粗 */
+    padding: 0;                                   /* 移除内边距 */
+    min-width: 32px;                              /* 最小宽度32px */
+    line-height: 1;                               /* 行高为1 */
+}
+
+#add-engine-btn {                                  /* 添加引擎按钮 */
+    background-color: var(--success-color);      /* 背景色为成功色(绿色) */
+}
+#add-engine-btn:hover {                            /* 添加按钮悬停效果 */
+    background-color: var(--success-hover);      /* 背景色变深 */
+}
+
+.delete-btn {                                      /* 删除按钮 */
+    background-color: var(--danger-color);       /* 背景色为危险色(红色) */
+    font-size: 20px;                             /* 字体大小20px(×符号) */
+}
+.delete-btn:hover {                                /* 删除按钮悬停效果 */
+    background-color: var(--danger-hover);       /* 背景色变深 */
+}
+
+/* =============================================== */
+/*                  配置按钮区域                   */
+/* =============================================== */
+
+.config-buttons {                                  /* 配置按钮区域 */
+    display: flex;                                /* 弹性布局 */
+    justify-content: center;                      /* 水平居中 */
+    gap: 16px;                                    /* 子元素间距16px */
+    margin-top: 32px;                             /* 上外边距32px */
+    padding-top: 24px;                            /* 上内边距24px */
+    border-top: 1px solid var(--border-color);   /* 顶部1px实线边框 */
+}
+
+#exportConfigBtn {                                 /* 导出配置按钮 */
+    background-color: var(--gray-color);         /* 背景色为灰色 */
+}
+#exportConfigBtn:hover {                           /* 导出按钮悬停效果 */
+    background-color: #5a6268;                   /* 背景色变深 */
+}
+
+.import-btn {                                      /* 导入配置按钮 */
+    background-color: var(--primary-color);     /* 背景色为主色调 */
+}
+.import-btn:hover {                                /* 导入按钮悬停效果 */
+    background-color: var(--primary-hover);     /* 背景色变深 */
+}
+
+#saveConfigBtn {                                   /* 保存配置按钮(禁用状态) */
+    background-color: var(--gray-color);         /* 背景色为灰色 */
+    cursor: not-allowed;                         /* 鼠标指针为禁止状态 */
+}
+#saveConfigBtn:not([disabled]) {                   /* 保存配置按钮(可用状态) */
+    background-color: var(--success-color);     /* 背景色为成功色 */
+    cursor: pointer;                             /* 鼠标指针为手形 */
+}
+#saveConfigBtn:not([disabled]):hover {             /* 保存按钮可用时悬停效果 */
+    background-color: var(--success-hover);     /* 背景色变深 */
+}
+
+#resetConfigBtn {                                  /* 重置配置按钮 */
+    background-color: var(--danger-color);      /* 背景色为危险色 */
+}
+#resetConfigBtn:hover {                            /* 重置按钮悬停效果 */
+    background-color: var(--danger-hover);      /* 背景色变深 */
+}
+
+/* =============================================== */
+/*                  状态消息区域                   */
+/* =============================================== */
+
+#status {                                          /* 状态消息容器 */
+    margin-top: 24px;                             /* 上外边距24px */
+    text-align: center;                          /* 文本居中 */
+    min-height: 24px;                            /* 最小高度24px(防止页面跳动) */
+}
+
+.status {                                          /* 状态消息样式 */
+    padding: 12px 16px;                          /* 内边距 上下12px 左右16px */
+    border-radius: 6px;                          /* 圆角6px */
+    font-weight: 500;                            /* 字体粗细500 */
+    display: inline-block;                       /* 行内块级元素 */
+}
+
+.status.success {                                  /* 成功状态消息 */
+    background-color: var(--success-bg);        /* 背景色为半透明绿色 */
+    color: var(--success-color);                /* 文字颜色为绿色 */
+}
+
+.status.error {                                    /* 错误状态消息 */
+    background-color: var(--error-bg);          /* 背景色为半透明红色 */
+    color: var(--danger-color);                 /* 文字颜色为红色 */
+}
+
+/* =============================================== */
+/*                 响应式设计区域                  */
+/* =============================================== */
+
+@media (max-width: 768px) {                         /* 移动端响应式设计(屏幕宽度≤768px) */
+    body {                                        /* 移动端页面主体 */
+        padding: 12px;                           /* 减少页面内边距至12px */
+    }
+
+    .container {                                 /* 移动端主容器 */
+        padding: 16px;                          /* 减少容器内边距至16px */
+    }
+
+    .engine-item label {                         /* 移动端引擎项标签 */
+        flex-direction: column;                  /* 改为垂直方向布局 */
+        align-items: stretch;                    /* 子元素拉伸填满宽度 */
+    }
+
+    .engine-name {                               /* 移动端引擎名称框 */
+        width: 100%;                            /* 宽度占满容器 */
+        margin-bottom: 8px;                     /* 下外边距8px */
+    }
+    
+    .engine-item-buttons {                       /* 移动端按钮容器 */
+        justify-content: center;                /* 按钮居中对齐 */
+        min-width: auto;                        /* 移除最小宽度限制 */
+        margin-top: 8px;                        /* 上外边距8px */
+    }
+
+    .config-buttons {                            /* 移动端配置按钮区域 */
+        flex-direction: column;                  /* 改为垂直方向布局 */
+    }
+}
+
+/* =============================================== */
+/*                    样式文件结束                    */
+/* =============================================== */
