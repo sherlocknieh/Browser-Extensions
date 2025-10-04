@@ -312,12 +312,12 @@ function resetConfig() {
     // 直接设置默认的搜索引擎
     const defaultEngines = [
         {
-            name: 'Google',
+            name: 'Google Lens',
             url: 'https://www.google.com/searchbyimage?image_url=%s',
             enabled: true
         },
         {
-            name: 'Yandex',
+            name: 'Yandex 搜图',
             url: 'https://yandex.com/images/search?url=%s&rpt=imageview',
             enabled: true
         }

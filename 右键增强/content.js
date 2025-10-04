@@ -22,6 +22,9 @@ function copyLinkText() {
         showToast('该链接没有文本', 'warning');
         return;
     }
+    
+    // 把文字设为选中状态
+    selectElementText(lastRightClicked);
 
     // 使用 clipboard API 写入剪贴板
     navigator.clipboard.writeText(textToCopy)
@@ -50,12 +53,55 @@ function getLinkText(Element) {
 }
 
 
+// 选中元素的文本内容
+function selectElementText(element) {
+    const selection = window.getSelection();
+    const range = document.createRange();
+    
+    // 清除现有选择
+    selection.removeAllRanges();
+    
+    // 如果是文本节点，选中整个文本
+    if (element.nodeType === Node.TEXT_NODE) {
+        range.selectNode(element);
+    } else {
+        // 选中元素内的所有文本内容
+        range.selectNodeContents(element);
+    }
+    
+    // 应用选择
+    selection.addRange(range);
+    
+    // 触发选中相关事件以通知其他插件
+    try {
+        // 1. selectionchange - 最重要的选择变化事件
+        document.dispatchEvent(new Event('selectionchange', {
+            bubbles: true,
+            cancelable: true
+        }));
+        
+        // 2. mouseup - 划词插件最常监听的事件
+        const rect = element.getBoundingClientRect();
+        element.dispatchEvent(new MouseEvent('mouseup', {
+            bubbles: true,
+            cancelable: true,
+            clientX: rect.left + rect.width / 2,
+            clientY: rect.top + rect.height / 2,
+            button: 0
+        }));
+        
+    } catch (error) {
+        console.warn('触发选择事件失败:', error);
+    }
+}
+
+
 // 显示Toast提示
 function showToast(text, icon = 'success') {
     // 用 Toastify 显示 Toast
     Toastify({
         text: text,
-        duration: 4000,
+        duration: 3000,
         close: true,
         gravity: 'bottom',
         position: 'center',
