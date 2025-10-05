@@ -17,21 +17,14 @@ function DefaultEngines() {
 
 // 扩展安装时初始化 (扩展安装/更新/重新启用时都会触发)
 chrome.runtime.onInstalled.addListener((details) => {
-    // 首次安装时写入默认配置
+    // 写入默认配置
+    chrome.storage.local.set({DefaultEngines: DefaultEngines()});       // 重置时用的默认数据
+    // 首次安装时写入初始数据
     if (details.reason === 'install') {
-        chrome.storage.local.set({imageSearchEngines: DefaultEngines()});
+        chrome.storage.local.set({SearchEngines: DefaultEngines()});    // 平常使用的数据
     }
     // 创建右键菜单
     createContextMenus();
-});
-
-
-// 监听后续存储变化，自动更新右键菜单
-chrome.storage.onChanged.addListener((changes, namespace) => {
-    // 确保是 local 存储区域且 imageSearchEngines 发生了变化
-    if (namespace === 'local' && changes.imageSearchEngines) {
-        createContextMenus();
-    }
 });
 
 
@@ -52,56 +45,70 @@ function createContextMenus() {
             id: "searchImage",
             title: "图片搜索",
             contexts: ["image"]
-        }, createImageSubMenus );
+        });
+        
+        // 搜图子菜单
+        createImageSubMenus();
+
+        // 一键搜图选项
+        chrome.contextMenus.create({
+            id: "searchImageAll",
+            title: "🔍 一键搜索",
+            contexts: ["image"],
+            parentId: "searchImage"
+        }, () => {
+            if (chrome.runtime.lastError) {
+                console.log('创建一键搜索菜单:', chrome.runtime.lastError.message);
+            }
+        });
+
+        // 分隔符
+        chrome.contextMenus.create({
+            id: "imageSeparator",
+            type: "separator",
+            contexts: ["image"],
+            parentId: "searchImage"
+        }, () => {
+            if (chrome.runtime.lastError) {
+                console.log('创建分隔符:', chrome.runtime.lastError.message);
+            }
+        });
+
+        // 添加搜图引擎
+        chrome.storage.local.get(['SearchEngines'], (result) => {
+            const engines = result.SearchEngines || [];
+            engines.forEach((engine, index) => {
+                if (engine.enabled) {
+                    const menuId = engine.name;
+                    chrome.contextMenus.create({
+                        id: menuId,
+                        title: engine.name,
+                        contexts: ["image"],
+                        parentId: "searchImage"
+                    }, () => {
+                        if (chrome.runtime.lastError) {
+                            console.log(`创建引擎菜单 ${engine.name}:`, chrome.runtime.lastError.message);
+                        }
+                    });
+                }
+            });
+        });
     });
 }
 
 // 创建图片搜索子菜单
 function createImageSubMenus() {
-    // 一键搜图选项
-    chrome.contextMenus.create({
-        id: "searchImageAll",
-        title: "🔍 一键搜索",
-        contexts: ["image"],
-        parentId: "searchImage"
-    }, () => {
-        if (chrome.runtime.lastError) {
-            console.log('创建一键搜索菜单:', chrome.runtime.lastError.message);
-        }
-    });
 
-    // 分隔符
-    chrome.contextMenus.create({
-        id: "imageSeparator",
-        type: "separator",
-        contexts: ["image"],
-        parentId: "searchImage"
-    }, () => {
-        if (chrome.runtime.lastError) {
-            console.log('创建分隔符:', chrome.runtime.lastError.message);
-        }
-    });
-
-    // 添加搜图引擎
-    chrome.storage.local.get(['imageSearchEngines'], (result) => {
-        const engines = result.imageSearchEngines || [];
-        engines.forEach((engine, index) => {
-            if (engine.enabled) {
-                const menuId = engine.name;
-                chrome.contextMenus.create({
-                    id: menuId,
-                    title: engine.name,
-                    contexts: ["image"],
-                    parentId: "searchImage"
-                }, () => {
-                    if (chrome.runtime.lastError) {
-                        console.log(`创建引擎菜单 ${engine.name}:`, chrome.runtime.lastError.message);
-                    }
-                });
-            }
-        });
-    });
 }
+
+// 监听后续存储变化，自动更新右键菜单
+chrome.storage.onChanged.addListener((changes, namespace) => {
+    // 确保是 local 存储区域且 SearchEngines 发生了变化
+    if (namespace === 'local' && changes.SearchEngines) {
+        createContextMenus();
+    }
+});
+
 
 
 // 监听菜单点击事件
@@ -133,9 +140,9 @@ function handleContextMenuClick(info, tab) {
 
 // 单个引擎搜图
 function handleSingleEngineSearch(menuItemId, imageUrl) {
-    chrome.storage.local.get(['imageSearchEngines'], (result) => {
+    chrome.storage.local.get(['SearchEngines'], (result) => {
         // 获取所有引擎列表
-        const engines = result.imageSearchEngines;
+        const engines = result.SearchEngines;
         // 找到对应的引擎
         const engine = engines.find(e => e.name === menuItemId);
         
@@ -153,9 +160,9 @@ function handleSingleEngineSearch(menuItemId, imageUrl) {
 
 // 一键搜图
 function handleAllEnginesSearch(imageUrl) {
-    chrome.storage.local.get(['imageSearchEngines'], (result) => {
+    chrome.storage.local.get(['SearchEngines'], (result) => {
         // 获取所有搜图引擎
-        const engines = result.imageSearchEngines;
+        const engines = result.SearchEngines;
         
         // 选出启用的引擎
         const urls = [];
