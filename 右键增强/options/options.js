@@ -1,41 +1,62 @@
 // 页面加载时初始化
 document.addEventListener('DOMContentLoaded', function() {
 
-    // 为已有按钮绑定事件
-    basicEventListeners();
-
+    // 加载配置管理按钮
+    loadConfigButtons();
     // 加载搜索引擎列表
     loadEngines();
 });
 
+// 加载配置管理按钮
+function loadConfigButtons() {
+    const configButtonsDiv = document.getElementById('config-buttons');
+    if (!configButtonsDiv) return;
 
-function basicEventListeners() {
-    // 保存配置按钮已移除，改为自动保存
-    // const saveConfigBtn = document.getElementById('saveConfigBtn');
-    // if (saveConfigBtn) {saveConfigBtn.addEventListener('click', saveAllConfigurations);}
-    // 配置导出按钮
-    const exportConfigBtn = document.getElementById('exportConfigBtn');
-    if (exportConfigBtn) {exportConfigBtn.addEventListener('click', exportConfig);}
-    // 配置导入按钮
-    const importConfigFile = document.getElementById('importConfigFile');
-    if (importConfigFile) { importConfigFile.addEventListener('change', importConfig);}
-    // 重置配置按钮
-    const resetConfigBtn = document.getElementById('resetConfigBtn');
-    if (resetConfigBtn) {resetConfigBtn.addEventListener('click', resetConfig);}
+    // 创建导出配置按钮
+    const exportBtn = document.createElement('button');
+    exportBtn.textContent = '📤 导出配置';
+    exportBtn.className = 'config-btn';
+    exportBtn.id = 'exportConfigBtn';
+    exportBtn.addEventListener('click', exportConfig);
+    configButtonsDiv.appendChild(exportBtn);
+
+    // 创建导入配置文件的输入框（隐藏）
+    const importFileInput = document.createElement('input');
+    importFileInput.type = 'file';
+    importFileInput.id = 'importConfigFile';
+    importFileInput.accept = 'application/json,.json';
+    importFileInput.style.display = 'none';
+    importFileInput.addEventListener('change', importConfig);
+    configButtonsDiv.appendChild(importFileInput);
+
+    // 使用按钮触发文件选择，更符合可访问性与语义
+    const importBtn = document.createElement('button');
+    importBtn.textContent = '📥 导入配置';
+    importBtn.className = 'config-btn import-btn';
+    importBtn.id = 'importConfigBtn';
+    importBtn.addEventListener('click', () => importFileInput.click());
+    configButtonsDiv.appendChild(importBtn);
+
+    // 创建重置配置按钮
+    const resetBtn = document.createElement('button');
+    resetBtn.textContent = '🔄 重置配置';
+    resetBtn.className = 'config-btn';
+    resetBtn.id = 'resetConfigBtn';
+    resetBtn.addEventListener('click', resetConfig);
+    configButtonsDiv.appendChild(resetBtn);
 }
-
 
 // 加载搜图引擎列表
 function loadEngines() {
-    // 读取配置
     chrome.storage.local.get('SearchEngines', (result) => {
+        // 读取本地配置
         const engines = result.SearchEngines || [];
-        
-        
-        // 清空现有内容
+
+        // 清空显示列表
         const enginesList = document.getElementById('enginesList');
         enginesList.textContent = '';
         
+        // 如果没有引擎，显示提示文字
         if (engines.length === 0) {
             const noEnginesMsg = document.createElement('p');
             noEnginesMsg.style.color = '#666';
@@ -49,21 +70,22 @@ function loadEngines() {
             const engineItem = createEngineItem(engine, index);
             enginesList.appendChild(engineItem);
         });
-        
+
         // 创建添加新引擎的表单
         const newEngineForm = createNewEngineForm();
         enginesList.appendChild(newEngineForm);
 
-        // 初始化 Sortable （只在有多于1项时）
+        // 初始化 Sortable
         initializeSortable();
-        
-        // 隐藏保存按钮，因为现在使用自动保存
-        updateSaveButtonState();
         
         // 存储原始配置用于检测变更
         storeOriginalConfig();
     });
 }
+
+
+
+
 
 // 纯函数：重排数组（便于单元测试）
 function reorderArray(arr, fromIndex, toIndex) {
@@ -77,23 +99,6 @@ function reorderArray(arr, fromIndex, toIndex) {
     return res;
 }
 
-// 防抖保存到 storage
-let saveTimer = null;
-function saveEnginesDebounced() {
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => {
-        const currentConfig = getCurrentConfiguration();
-        // 增加 updatedAt 字段
-        const now = Date.now();
-        currentConfig.forEach(item => item.updatedAt = now);
-        chrome.storage.local.set({ SearchEngines: currentConfig }, () => {
-            // originalConfig = JSON.parse(JSON.stringify(currentConfig)); // 已禁用
-            // hasChanges = false; // 已禁用
-            // updateSaveButtonState(); // 已禁用
-            showStatus('配置已保存（自动）', 'success');
-        });
-    }, 500);
-}
 
 // 存储原始配置用于检测变更
 let originalConfigForComparison = [];
@@ -129,10 +134,6 @@ function autoSaveOnBlur() {
     }
     
     if (isValid) {
-        // 添加 updatedAt 字段
-        const now = Date.now();
-        currentConfig.forEach(item => item.updatedAt = now);
-        
         chrome.storage.local.set({ SearchEngines: currentConfig }, () => {
             // 更新原始配置以便下次比较
             originalConfigForComparison = JSON.parse(JSON.stringify(currentConfig));
@@ -141,53 +142,6 @@ function autoSaveOnBlur() {
     }
 }
 
-// 新引擎输入框失去焦点时自动添加引擎（已禁用，改为手动添加）
-// function autoAddNewEngine() {
-//     const nameInput = document.getElementById('new-engine-name');
-//     const urlInput = document.getElementById('new-engine-url');
-//     
-//     if (!nameInput || !urlInput) return;
-//     
-//     const name = nameInput.value.trim();
-//     const url = urlInput.value.trim();
-//     
-//     // 只有当两个输入框都有内容时才自动添加
-//     if (name && url) {
-//         // 检查URL是否包含占位符
-//         if (!url.includes('%s')) {
-//             showStatus('URL必须包含图片占位符 %s', 'error');
-//             return;
-//         }
-//         
-//         // 添加新引擎
-//         chrome.storage.local.get('SearchEngines', (result) => {
-//             const engines = result.SearchEngines || [];
-//             
-//             // 检查名称是否重复
-//             if (engines.some(e => e.name === name)) {
-//                 showStatus('引擎名称已存在', 'error');
-//                 return;
-//             }
-//             
-//             // 创建新引擎
-//             const newEngine = {
-//                 name: name,
-//                 url: url,
-//                 enabled: true,
-//                 updatedAt: Date.now()
-//             };
-//             
-//             engines.push(newEngine);
-//             
-//             chrome.storage.local.set({ SearchEngines: engines }, () => {
-//                 showStatus(`已自动添加 "${name}" 搜索引擎`, 'success');
-//                 loadEngines(); // 重新加载列表
-//             });
-//         });
-//     }
-// }
-
-// 上移/下移操作已移除，使用拖拽手柄进行排序
 
 // 初始化 Sortable
 let sortableInstance = null;
@@ -208,8 +162,6 @@ function initializeSortable() {
         preventOnFilter: false,
         onEnd: function(evt) {
             // 计算真实索引（排除最后的新增表单）
-            const items = Array.from(listEl.querySelectorAll('.engine-item'));
-            const engineItems = items.filter((el, idx) => !el.querySelector('.new-engine-input'));
             const oldIndex = evt.oldIndex;
             const newIndex = evt.newIndex;
 
@@ -222,9 +174,6 @@ function initializeSortable() {
                 const adjustedOld = oldIndex;
                 const adjustedNew = newIndex;
                 const newArr = reorderArray(engines, adjustedOld, adjustedNew);
-                // 更新 updatedAt
-                const now = Date.now();
-                newArr.forEach(item => item.updatedAt = now);
                 chrome.storage.local.set({ SearchEngines: newArr }, () => {
                     showStatus('顺序已保存', 'success');
                     loadEngines();
@@ -234,22 +183,6 @@ function initializeSortable() {
     };
 
     sortableInstance = Sortable.create(listEl, options);
-}
-
-// 存储原始配置，用于检测变化（已禁用）
-// let originalConfig = [];
-// let hasChanges = false;
-
-// 配置变化时的回调函数（已禁用）
-function onConfigChange() {
-    // checkForChanges();
-    // updateSaveButtonState();
-}
-
-// 检测是否有配置变化（已禁用）
-function checkForChanges() {
-    // const currentConfig = getCurrentConfiguration();
-    // hasChanges = !arraysEqual(originalConfig, currentConfig);
 }
 
 // 获取当前页面的配置
@@ -286,41 +219,6 @@ function arraysEqual(arr1, arr2) {
         }
     }
     return true;
-}
-
-// 更新保存按钮状态（已禁用）
-function updateSaveButtonState() {
-    const saveBtn = document.getElementById('saveConfigBtn');
-    if (saveBtn) {
-        saveBtn.style.display = 'none'; // 隐藏保存按钮，改为自动保存
-    }
-}
-
-// 保存所有配置
-function saveAllConfigurations() {
-    // if (!hasChanges) return; // 已禁用变更检查
-    
-    const currentConfig = getCurrentConfiguration();
-    
-    // 验证配置
-    for (const engine of currentConfig) {
-        if (!engine.name || !engine.url) {
-            showStatus('引擎名称和URL不能为空', 'error');
-            return;
-        }
-        if (!engine.url.includes('%s')) {
-            showStatus(`引擎"${engine.name}"的URL必须包含占位符 %s`, 'error');
-            return;
-        }
-    }
-    
-    // 保存到存储
-    chrome.storage.local.set({ SearchEngines: currentConfig }, () => {
-        // originalConfig = JSON.parse(JSON.stringify(currentConfig)); // 已禁用
-        // hasChanges = false; // 已禁用
-        // updateSaveButtonState(); // 已禁用
-        showStatus('配置已保存', 'success');
-    });
 }
 
 // 导出配置
@@ -441,19 +339,14 @@ function createEngineItem(engine, index) {
             const idx = index;
             if (idx >= 0 && idx < engines.length) {
                 engines[idx].enabled = checkbox.checked;
-                engines[idx].updatedAt = Date.now();
                 // 合并并写回（简单策略：覆盖该索引）
                 chrome.storage.local.set({ SearchEngines: engines }, () => {
-                    // originalConfig = JSON.parse(JSON.stringify(engines)); // 已禁用
-                    // hasChanges = false; // 已禁用
-                    // updateSaveButtonState(); // 已禁用
                     showStatus('已保存启用状态', 'success');
                     // 重新渲染以保持索引和 DOM 一致
                     loadEngines();
                 });
             } else {
-                // 如果找不到对应项，回退到整体变更检测（已禁用）
-                // onConfigChange();
+                // 如果找不到对应项，忽略
             }
         });
     });
@@ -464,7 +357,6 @@ function createEngineItem(engine, index) {
     nameInput.className = 'engine-name';
     nameInput.value = engine.name;
     nameInput.setAttribute('aria-label', '搜索引擎名称');
-    // nameInput.addEventListener('input', onConfigChange); // 已禁用变更监听
     nameInput.addEventListener('blur', autoSaveOnBlur); // 失去焦点时自动保存
     
     // 引擎URL输入框
@@ -473,7 +365,6 @@ function createEngineItem(engine, index) {
     urlInput.className = 'engine-url';
     urlInput.value = engine.url;
     urlInput.setAttribute('aria-label', '搜索引擎URL');
-    // urlInput.addEventListener('input', onConfigChange); // 已禁用变更监听
     urlInput.addEventListener('blur', autoSaveOnBlur); // 失去焦点时自动保存
     
     // 删除按钮
@@ -518,7 +409,6 @@ function createNewEngineForm() {
     nameInput.className = 'engine-name new-engine-input';
     nameInput.placeholder = '新引擎名称';
     nameInput.setAttribute('aria-label', '新引擎名称');
-    // nameInput.addEventListener('blur', autoAddNewEngine); // 已移除自动添加，改为手动添加
     
     // URL输入框
     const urlInput = document.createElement('input');
@@ -527,7 +417,6 @@ function createNewEngineForm() {
     urlInput.className = 'engine-url new-engine-input';
     urlInput.placeholder = '新引擎 URL (图片链接用 %s 占位)';
     urlInput.setAttribute('aria-label', '新引擎URL');
-    // urlInput.addEventListener('blur', autoAddNewEngine); // 已移除自动添加，改为手动添加
     
     // 添加按钮
     const addBtn = document.createElement('button');

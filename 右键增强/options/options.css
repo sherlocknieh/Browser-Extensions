@@ -209,13 +209,10 @@ button, .config-btn {                               /* 按钮通用样式 */
 /*                  配置按钮区域                   */
 /* =============================================== */
 
-.config-buttons {                                  /* 配置按钮区域 */
+#config-buttons {                                  /* 配置按钮区域 */
     display: flex;                                /* 弹性布局 */
     justify-content: center;                      /* 水平居中 */
     gap: 16px;                                    /* 子元素间距16px */
-    margin-top: 32px;                             /* 上外边距32px */
-    padding-top: 24px;                            /* 上内边距24px */
-    border-top: 1px solid var(--border-color);   /* 顶部1px实线边框 */
 }
 
 #exportConfigBtn {                                 /* 导出配置按钮 */

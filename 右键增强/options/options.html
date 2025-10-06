@@ -10,17 +10,11 @@
     <div class="container">
         <h1>编辑搜图引擎</h1>
         
-        <div id="enginesList"> <!-- 引擎列表将由 JavaScript 动态生成 --> </div>
+        <div id="enginesList"> <!-- 引擎列表 --> </div>
 
-        <div class="config-buttons">
-            <button id="saveConfigBtn" class="config-btn save-btn" disabled>💾 保存配置</button>
-            <button id="exportConfigBtn" class="config-btn">📤 导出配置</button>
-            <label for="importConfigFile" class="config-btn import-btn">📥 导入配置</label>
-            <input type="file" id="importConfigFile" accept=".json" style="display: none;">
-            <button id="resetConfigBtn" class="config-btn">🔄 重置配置</button>
-        </div>
+        <div id="config-buttons"> <!-- 配置管理按钮 -->  </div>
 
-        <div id="status"> <!-- 用于显示操作成功或失败的状态消息 --> </div>
+        <div id="status"> <!-- 状态消息区域 --> </div>
     </div>
 
     <!-- 引入 SortableJS 用于拖拽排序 -->
