@@ -72,6 +72,7 @@ h1 {                                               /* 主标题样式 */
     padding: 8px;                                 /* 内边距8px */
     border-radius: 6px;                          /* 圆角6px */
     transition: background-color 0.2s;           /* 背景色过渡动画0.2秒 */
+    gap: 8px;                                     /* 左侧区域与按钮区域留出间距 */
 }
 
 .engine-item:hover {                               /* 引擎项悬停效果 */
@@ -81,7 +82,8 @@ h1 {                                               /* 主标题样式 */
 .engine-item label {                               /* 引擎项标签样式 */
     display: flex;                                /* 弹性布局 */
     align-items: center;                          /* 垂直居中对齐 */
-    width: 100%;                                  /* 占满宽度 */
+    flex: 1 1 auto;                               /* 占据剩余空间，允许收缩 */
+    min-width: 0;                                  /* 允许内部内容在 flex 中收缩 */
     gap: 12px;                                    /* 子元素间距12px */
 }
 
@@ -99,7 +101,8 @@ input[type="text"] {                                 /* 文本输入框通用样
 
 /* URL输入框才使用flex-grow */
 .engine-url {                                      /* URL输入框样式 */
-    flex-grow: 1;                                 /* 占据剩余空间 */
+    flex: 1 1 0%;                                 /* 占据剩余空间，允许收缩 */
+    min-width: 0;                                  /* 允许内容收缩避免溢出 */
 }
 
 input[type="text"]:focus {                         /* 输入框聚焦状态 */
@@ -172,6 +175,7 @@ button, .config-btn {                               /* 按钮通用样式 */
     min-width: 40px;                              /* 最小宽度40px */
     justify-content: flex-end;                    /* 右对齐 */
     align-items: center;                          /* 垂直居中对齐 */
+    flex: 0 0 auto;                                /* 固定自身尺寸，不被左侧挤压 */
 }
 
 
@@ -199,10 +203,19 @@ button, .config-btn {                               /* 按钮通用样式 */
 
 .delete-btn {                                      /* 删除按钮 */
     background-color: var(--danger-color);       /* 背景色为危险色(红色) */
-    font-size: 20px;                             /* 字体大小20px(×符号) */
+    font-size: 13px;                             /* 字体稍小，避免过大 */
+    padding: 6px 10px;                           /* 紧凑的内边距 */
+    border-radius: 4px;                          /* 略小的圆角 */
+    line-height: 1.2;                            /* 紧凑行高 */
 }
 .delete-btn:hover {                                /* 删除按钮悬停效果 */
     background-color: var(--danger-hover);       /* 背景色变深 */
+}
+
+/* 删除确认态样式：更醒目 */
+.delete-btn.confirm {
+    background-color: #c82333;                   /* 更深的红色 */
+    box-shadow: 0 0 0 2px rgba(200, 35, 51, 0.15) inset; /* 内阴影强调 */
 }
 
 /* =============================================== */
