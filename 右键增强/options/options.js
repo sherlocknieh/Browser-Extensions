@@ -460,7 +460,9 @@ function showStatus(message, type) {
             close: true,
             gravity: 'bottom', // 底部显示
             position: 'center', // 居中显示
-            backgroundColor: type === 'success' ? 'var(--success-color)' : 'var(--danger-color)',
+            style: {
+                background: type === 'success' ? 'var(--success-color)' : 'var(--danger-color)'
+            },
             stopOnFocus: true, // 鼠标悬停时暂停消失
         }).showToast();
         return;
