@@ -5,20 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>右键增强 - 设置</title>
     <link rel="stylesheet" href="options.css">
+    <link rel="stylesheet" href="/libs/toastify.css">
 </head>
 <body>
     <div class="container">
         <h1>编辑搜图引擎</h1>
-        
         <div id="enginesList"> <!-- 引擎列表 --> </div>
-
         <div id="config-buttons"> <!-- 配置管理按钮 -->  </div>
-
-        <div id="status"> <!-- 状态消息区域 --> </div>
+        <div id="statusMessage">  <!-- 状态消息区域 --> </div>
     </div>
-
-    <!-- 引入 SortableJS 用于拖拽排序 -->
-    <script src="/libs/Sortable.min.js"></script>
+    <script src="/libs/Sortable.min.js"></script>    <!-- 引入 SortableJS 用于拖拽排序 -->
+    <script src="/libs/toastify.js"></script>    <!-- 引入 Toastify 用于提示消息 -->
     <script src="options.js"></script>
 </body>
 </html>

@@ -1,0 +1,27 @@
+/* 跨组件公用元素样式 */
+
+/* 标题样式重置 */
+h1 {
+  text-align: center;
+  margin: 0;
+}
+
+/* 按钮样式重置 */
+button {
+  padding: 0.5em;
+}
+
+/* 文字输入框 */
+input[type="text"] {
+  padding: 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  transition: border-color 0.2s;
+}
+
+/* 文字输入框:聚焦状态 */
+input[type="text"]:focus {
+  outline: none;
+  border-color: var(--primary-color);
+}
+

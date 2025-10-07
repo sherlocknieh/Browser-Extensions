@@ -81,11 +81,11 @@ function loadEngines() {
 
 // 创建单个引擎项
 function createEngineItem(engine, index) {
+    
     const engineItem = document.createElement('div');
     engineItem.className = 'engine-item';
-    engineItem.dataset.engineIndex = index;
 
-    const label = document.createElement('label');
+    engineItem.dataset.engineIndex = index; // 创建了 data-engine-index 属性，并赋值
 
     // 启用/禁用复选框
     const checkbox = document.createElement('input');
@@ -111,23 +111,18 @@ function createEngineItem(engine, index) {
     nameInput.type = 'text';
     nameInput.className = 'engine-name';
     nameInput.value = engine.name;
-    nameInput.setAttribute('aria-label', '搜索引擎名称');
-    // 失焦时按行自动保存（在下方通过 attachInlineSaveHandlers 统一绑定）
 
     // 引擎URL输入框
     const urlInput = document.createElement('input');
     urlInput.type = 'text';
     urlInput.className = 'engine-url';
     urlInput.value = engine.url;
-    urlInput.setAttribute('aria-label', '搜索引擎URL');
-    // 失焦时按行自动保存（在下方通过 attachInlineSaveHandlers 统一绑定）
 
     // 删除按钮
     const deleteBtn = document.createElement('button');
     deleteBtn.className = 'delete-btn';
-    deleteBtn.innerHTML = '删除';
+    deleteBtn.innerHTML = '🗑️';
     deleteBtn.title = '删除引擎';
-    deleteBtn.setAttribute('aria-label', '删除引擎');
     // 二次确认：首次点击进入确认态并显示倒计时，二次点击才执行删除
     deleteBtn.addEventListener('click', function() {
         const confirming = deleteBtn.dataset.confirm === 'true';
@@ -155,7 +150,7 @@ function createEngineItem(engine, index) {
                     // 超时自动还原
                     clearCountdown();
                     deleteBtn.dataset.confirm = 'false';
-                    deleteBtn.innerHTML = '删除';
+                    deleteBtn.innerHTML = '<span class="icon-trash">🗑️</span>';
                     deleteBtn.title = '删除引擎';
                     deleteBtn.classList.remove('confirm');
                 } else {
@@ -166,19 +161,13 @@ function createEngineItem(engine, index) {
             // 确认删除
             clearCountdown();
             deleteBtn.dataset.confirm = 'false';
-            deleteBtn.innerHTML = '删除';
+            deleteBtn.innerHTML = '<span class="icon-trash">🗑️</span>';
             deleteBtn.title = '删除引擎';
             deleteBtn.classList.remove('confirm');
             deleteEngine(index);
         }
     });
-
-    const buttonWrapper = document.createElement('div');
-    buttonWrapper.className = 'engine-item-buttons';
-    buttonWrapper.appendChild(deleteBtn);
-
-    label.append(checkbox, nameInput, urlInput);
-    engineItem.append(label, buttonWrapper);
+    engineItem.append(checkbox, nameInput, urlInput, deleteBtn);
     // 绑定本行输入框的就地保存处理
     attachInlineSaveHandlers(nameInput, urlInput, index);
     return engineItem;
@@ -190,9 +179,7 @@ function createNewEngineForm() {
     engineItem.className = 'engine-item';
     engineItem.classList.add('non-draggable');
 
-    const label = document.createElement('label');
-
-    const addIcon = document.createElement('div');
+    const addIcon = document.createElement('button');
     addIcon.className = 'add-engine-icon';
     addIcon.textContent = '+';
 
@@ -201,29 +188,29 @@ function createNewEngineForm() {
     nameInput.id = 'new-engine-name';
     nameInput.className = 'engine-name new-engine-input';
     nameInput.placeholder = '新引擎名称';
-    nameInput.setAttribute('aria-label', '新引擎名称');
 
     const urlInput = document.createElement('input');
     urlInput.type = 'text';
     urlInput.id = 'new-engine-url';
     urlInput.className = 'engine-url new-engine-input';
     urlInput.placeholder = '新引擎 URL (图片链接用 %s 占位)';
-    urlInput.setAttribute('aria-label', '新引擎URL');
 
     const addBtn = document.createElement('button');
     addBtn.id = 'add-engine-btn';
-    addBtn.className = 'icon-btn';
     addBtn.innerHTML = '+';
     addBtn.title = '添加引擎';
-    addBtn.setAttribute('aria-label', '添加引擎');
     addBtn.addEventListener('click', addNewEngine);
 
-    const buttonWrapper = document.createElement('div');
-    buttonWrapper.className = 'engine-item-buttons';
-    buttonWrapper.appendChild(addBtn);
-
-    label.append(addIcon, nameInput, urlInput);
-    engineItem.append(label, buttonWrapper);
+    engineItem.append(addIcon, nameInput, urlInput, addBtn);
+    // 支持回车提交：在新增引擎输入框按 Enter 时触发添加
+    const newEngineKeyHandler = (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            addNewEngine();
+        }
+    };
+    nameInput.addEventListener('keydown', newEngineKeyHandler);
+    urlInput.addEventListener('keydown', newEngineKeyHandler);
     return engineItem;
 }
 
@@ -327,6 +314,17 @@ function attachInlineSaveHandlers(nameInput, urlInput, index) {
 
     nameInput.addEventListener('blur', trySaveRow);
     urlInput.addEventListener('blur', trySaveRow);
+    // 支持回车保存：在行内输入框按 Enter 时触发保存并移除焦点
+    const inlineKeyHandler = (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            trySaveRow();
+            // 让输入框失去焦点以触发视觉上的“提交”行为
+            e.target.blur();
+        }
+    };
+    nameInput.addEventListener('keydown', inlineKeyHandler);
+    urlInput.addEventListener('keydown', inlineKeyHandler);
 }
 
 // 拖拽排序
@@ -453,10 +451,33 @@ function resetConfig() {
 //         消息提示
 // =========================
 function showStatus(message, type) {
-    const status = document.getElementById('status');
-    status.innerHTML = `<div class="status ${type}">${message}</div>`;
-    setTimeout(() => {
-        status.innerHTML = '';
-    }, 2000);
+    
+    // 使用 toastify 库显示消息
+    if (typeof Toastify === 'function') {
+        Toastify({
+            text: message,
+            duration: 3000,
+            close: true,
+            gravity: 'bottom', // 底部显示
+            position: 'center', // 居中显示
+            backgroundColor: type === 'success' ? 'var(--success-color)' : 'var(--danger-color)',
+            stopOnFocus: true, // 鼠标悬停时暂停消失
+        }).showToast();
+        return;
+    }
+
+    // 如果没有 toastify 库，则使用页面内的状态栏显示（降级方案）
+    const statusDiv = document.getElementById('statusMessage');
+    if (!statusDiv) return;
+
+    statusDiv.textContent = message;
+    statusDiv.className = `status ${type === 'success' ? 'success' : 'error'}`;
+    statusDiv.style.display = 'inline-block';
+
+    // 自动隐藏
+    clearTimeout(statusDiv._hideTimeout);
+    statusDiv._hideTimeout = setTimeout(() => {
+        statusDiv.style.display = 'none';
+    }, 3000);
 }
         
