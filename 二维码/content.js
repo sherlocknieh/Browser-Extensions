@@ -5,6 +5,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         QRCodeReader(message.imageUrl);
         // 这里传入的图片URL是完整链接
     }
+    if (message.action === "screenshotQR") {
+        // 处理截图识别请求（未来功能）
+        Swal.fire({
+            toast: true,
+            icon: 'info',
+            title: chrome.i18n.getMessage('featureInDevTitle'),
+            text: chrome.i18n.getMessage('featureInDevDesc'),
+            showCloseButton: true,
+        });
+    }
 });
 
 
@@ -17,9 +27,11 @@ function QRCodeReader(imageUrl) {
     })
     .catch(error => {
         Swal.fire({
+            toast: true,
             icon: 'error',
-            title: '图片获取失败',
+            title: chrome.i18n.getMessage('imageFetchFailed'),
             text: error.message,
+            showCloseButton: true,
         });                         // 显示错误信息
     });
 }
@@ -34,15 +46,17 @@ async function LoadImage(imageUrl) {
         img.src = imageUrl;
         await new Promise((resolve, reject) => {
             img.onload = () => resolve();
-            img.onerror = () => reject(new Error("图片加载失败"));
+            img.onerror = () => reject(new Error(chrome.i18n.getMessage('imageLoadFailed')));
         });
         return imgToData(img);
     } else {
     // 跨域：通过 background 代理获取
         const loadingToast = Swal.fire({
+            toast: true,
             icon: 'info',
-            title: '正在获取图片数据...',
-            text: '跨域图片，数据获取可能略慢',
+            title: chrome.i18n.getMessage('fetchingImage'),
+            text: chrome.i18n.getMessage('crossOriginNotice'),
+            showCloseButton: true,
             didOpen: () => {Swal.showLoading();}
         });
         return new Promise((resolve, reject) => {
@@ -51,10 +65,10 @@ async function LoadImage(imageUrl) {
                 if (response && response.success) {
                     const img = new Image();
                     img.onload = () => resolve(imgToData(img));
-                    img.onerror = () => reject(new Error("图片加载失败"));
+                    img.onerror = () => reject(new Error(chrome.i18n.getMessage('imageLoadFailed')));
                     img.src = response.dataUrl;
                 } else {
-                    reject(new Error(response?.error || "代理获取失败"));
+                    reject(new Error(response?.error || chrome.i18n.getMessage('proxyFetchFailed')));
                 }
                 loadingToast.close();
             });
@@ -75,33 +89,46 @@ async function LoadImage(imageUrl) {
 
 // 二维码解析函数
 async function decodeQRCode(imageData) {
-
-    const code = jsQR(imageData.data, imageData.width, imageData.height, {
-        inversionAttempts: "attemptBoth"});   // 支持反转色
-
-    if (code) {
-        const result = code.data;
-        Swal.fire({
-            icon: 'success',
-            title: '识别成功',
-            text: result,
-            showCancelButton: true,
-            confirmButtonText: '打开链接',
-            cancelButtonText: '复制链接'
-        }).then((res) => {
-            if (res.isConfirmed) {
-                const url = result.startsWith('http') ? result : 'https://' + result;
-                window.open(url, '_blank');
-            } else if (res.dismiss === Swal.DismissReason.cancel) {
-                navigator.clipboard.writeText(result);
-            }
-        });
-    } else {
-        Swal.fire({
-            icon: 'warning',
-            title: '识别失败',
-            text: '未发现有效二维码',
-            confirmButtonText: '确定'
-        });
-    }
+    // 先显示加载，再让浏览器完成一次渲染，避免 jsQR 同步阻塞导致弹窗不出现
+    const loadingToast = Swal.fire({
+        toast: true,
+        icon: 'info',
+        title: chrome.i18n.getMessage('decodingQR'),
+        didOpen: () => {Swal.showLoading();},
+        showCloseButton: true
+    });
+    setTimeout(() => {
+        const code = jsQR(imageData.data, imageData.width, imageData.height, {
+            inversionAttempts: "attemptBoth"});   // 支持反转色
+        loadingToast.close();
+        if (code) {
+            const result = code.data;
+            Swal.fire({
+                toast: true,
+                icon: 'success',
+                title: chrome.i18n.getMessage('recognitionSuccess'),
+                text: result,
+                showCancelButton: true,
+                confirmButtonText: chrome.i18n.getMessage('openLink'),
+                cancelButtonText: chrome.i18n.getMessage('copyLink'),
+                showCloseButton: true
+            }).then((res) => {
+                if (res.isConfirmed) {
+                    const url = result.startsWith('http') ? result : 'https://' + result;
+                    window.open(url, '_blank');
+                } else if (res.dismiss === Swal.DismissReason.cancel) {
+                    navigator.clipboard.writeText(result);
+                }
+            });
+        } else {
+            Swal.fire({
+                toast: true,
+                icon: 'warning',
+                title: chrome.i18n.getMessage('recognitionFailed'),
+                text: chrome.i18n.getMessage('noValidQRCode'),
+                confirmButtonText: chrome.i18n.getMessage('confirm'),
+                showCloseButton: true
+            });
+        }
+    }, 50);  // 延时让浏览器渲染加载弹窗
 }

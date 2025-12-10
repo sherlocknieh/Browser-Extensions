@@ -1,0 +1,98 @@
+{
+  "appName": {
+    "message": "QR Code",
+    "description": "Application name"
+  },
+  "appDescription": {
+    "message": "Generate and recognize QR codes",
+    "description": "Application description"
+  },
+  "generateQR_page": {
+    "message": "QR for This Page",
+    "description": "Context menu item for generating QR code from current page"
+  },
+  "generateQR_link": {
+    "message": "Make QR from Link",
+    "description": "Context menu item for generating QR code from link"
+  },
+  "generateQR_selection": {
+    "message": "Make QR from Selection",
+    "description": "Context menu item for generating QR code from selected text"
+  },
+  "decodeQR": {
+    "message": "Scan QR in Image",
+    "description": "Context menu item for recognizing QR code in image"
+  },
+  "screenShot": {
+    "message": "Screenshot to Scan QR",
+    "description": "Context menu item for taking screenshot to recognize QR code"
+  },
+  "fetchingImage": {
+    "message": "Getting the image...",
+    "description": "Loading message when fetching image"
+  },
+  "decodingQR": {
+    "message": "Scanning the QR...",
+    "description": "Loading message when decoding QR code"
+  },
+  "recognitionSuccess": {
+    "message": "Scanned successfully",
+    "description": "Success dialog title"
+  },
+  "openLink": {
+    "message": "Open link",
+    "description": "Button to open the link"
+  },
+  "copyLink": {
+    "message": "Copy link",
+    "description": "Button to copy the link"
+  },
+  "imageFetchFailed": {
+    "message": "Couldn't load image",
+    "description": "Error dialog title for image loading failure"
+  },
+  "unableLoadImageData": {
+    "message": "Can't read the image data",
+    "description": "Error message for image loading failure"
+  },
+  "recognitionFailed": {
+    "message": "Scan failed",
+    "description": "Error dialog title for recognition failure"
+  },
+  "noValidQRCode": {
+    "message": "No QR code found",
+    "description": "Error message when no QR code is found"
+  },
+  "error": {
+    "message": "Error",
+    "description": "Generic error title"
+  },
+  "imageFetchError": {
+    "message": "Image fetch failed: ",
+    "description": "Error message for image fetch failure"
+  },
+  "imageLoadFailed": {
+    "message": "Image load failed",
+    "description": "Error message when image element cannot load"
+  },
+  "crossOriginNotice": {
+    "message": "Cross-origin image; this may take a moment",
+    "description": "Notice for slower cross-origin fetch"
+  },
+  "proxyFetchFailed": {
+    "message": "Proxy fetch failed",
+    "description": "Error when background proxy fetch fails"
+  },
+  "featureInDevTitle": {
+    "message": "Feature in progress",
+    "description": "Title for not-yet-implemented feature"
+  },
+  "featureInDevDesc": {
+    "message": "Screenshot QR scanning is in progress—stay tuned!",
+    "description": "Description for not-yet-implemented feature"
+  },
+  "confirm": {
+    "message": "OK",
+    "description": "Confirm button text"
+  }
+}
