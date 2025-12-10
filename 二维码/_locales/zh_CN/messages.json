@@ -91,6 +91,14 @@
     "message": "截图识别二维码功能正在开发，敬请期待！",
     "description": "未完成功能的提示描述"
   },
+  "screenshotFailed": {
+    "message": "截图失败",
+    "description": "截图操作失败的提示标题"
+  },
+  "screenshotCancelled": {
+    "message": "截图已取消",
+    "description": "用户取消截图或浏览器不支持的提示标题"
+  },
   "confirm": {
     "message": "确定",
     "description": "确认按钮文本"

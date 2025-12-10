@@ -91,6 +91,14 @@
     "message": "Screenshot QR scanning is in progress—stay tuned!",
     "description": "Description for not-yet-implemented feature"
   },
+  "screenshotFailed": {
+    "message": "Screenshot failed",
+    "description": "Error title for screenshot operation failure"
+  },
+  "screenshotCancelled": {
+    "message": "Screenshot cancelled",
+    "description": "Title for user cancel or browser not supported"
+  },
   "confirm": {
     "message": "OK",
     "description": "Confirm button text"

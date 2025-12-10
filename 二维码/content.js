@@ -6,14 +6,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         // 这里传入的图片URL是完整链接
     }
     if (message.action === "screenshotQR") {
-        // 处理截图识别请求（未来功能）
-        Swal.fire({
-            toast: true,
-            icon: 'info',
-            title: chrome.i18n.getMessage('featureInDevTitle'),
-            text: chrome.i18n.getMessage('featureInDevDesc'),
-            showCloseButton: true,
-        });
+        // 处理截图识别请求
+        handleScreenshotQR();
     }
 });
 
@@ -131,4 +125,49 @@ async function decodeQRCode(imageData) {
             });
         }
     }, 50);  // 延时让浏览器渲染加载弹窗
+}
+
+
+// 截图识别二维码函数
+function handleScreenshotQR() {
+    // 创建截图插件实例
+    // 该插件会自动启用 webrtc 模式来获取屏幕
+    const screenShotHandler = new screenShotPlugin({
+        enableWebRtc: true,  // 启用 WebRTC 来获取屏幕内容
+        // 截图完成回调
+        completeCallback: ({base64, cutInfo}) => {
+            // 获取到截图的 base64 数据，开始识别二维码
+            QRCodeReader(base64);
+            // 销毁截图容器
+            screenShotHandler.destroyComponents();
+        },
+        // 截图取消回调
+        closeCallback: () => {
+            console.log("截图窗口已关闭");
+        },
+        // WebRTC 响应完成回调（用户选择要截图的内容后触发）
+        triggerCallback: (response) => {
+            if (response.code === 0) {
+                console.log("截图组件加载完成");
+            } else {
+                Swal.fire({
+                    toast: true,
+                    icon: 'warning',
+                    title: chrome.i18n.getMessage('screenshotFailed'),
+                    text: response.msg,
+                    showCloseButton: true
+                });
+            }
+        },
+        // WebRTC 被取消或浏览器不支持时的回调
+        cancelCallback: (response) => {
+            Swal.fire({
+                toast: true,
+                icon: 'error',
+                title: chrome.i18n.getMessage('screenshotCancelled'),
+                text: response.msg,
+                showCloseButton: true
+            });
+        }
+    });
 }
