@@ -4,7 +4,7 @@
 |name     | description         | link |
 |---      |---                  |---   |
 |二维码   | [README](#二维码)   |[Microsoft Edge](https://microsoftedge.microsoft.com/addons/detail/clkjmabfjboobjkemgknlgpjjlhdghbp)|
-|右键增强 | [README](#右键增强) ||
+|右键增强 | [README](#右键增强) |[Microsoft Edge](https://microsoftedge.microsoft.com/addons/detail/ingokbdobdmjedneflejcdidkkafciic)|
 
 -------------------------------------------
 
