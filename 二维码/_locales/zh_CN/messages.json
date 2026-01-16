@@ -106,5 +106,73 @@
   "pasteImage": {
     "message": "粘贴图片识别二维码",
     "description": "右键菜单项：粘贴图片识别二维码"
+  },
+  "pasteDialogTitle": {
+    "message": "粘贴图片识别二维码",
+    "description": "对话框标题"
+  },
+  "pasteDialogHint": {
+    "message": "支持粘贴、拖拽或点击选择图片",
+    "description": "对话框副标题"
+  },
+  "dropZoneText": {
+    "message": "点击粘贴图片或拖拽图片到此处",
+    "description": "拖拽区域主文字"
+  },
+  "dropZoneHint": {
+    "message": "支持 Ctrl+V 粘贴剪贴板图片",
+    "description": "拖拽区域副文字"
+  },
+  "scanningText": {
+    "message": "正在识别二维码...",
+    "description": "识别中的文字"
+  },
+  "clearImageBtn": {
+    "message": "清除图片",
+    "description": "清除按钮文字"
+  },
+  "closeBtn": {
+    "message": "关闭",
+    "description": "关闭按钮文字"
+  },
+  "copyContent": {
+    "message": "复制内容",
+    "description": "复制按钮文字"
+  },
+  "alreadyCopied": {
+    "message": "已复制",
+    "description": "复制成功提示文字"
+  },
+  "recognitionSuccessTitle": {
+    "message": "识别成功: ",
+    "description": "识别成功后的文字前缀"
+  },
+  "recognitionFailedMsg": {
+    "message": "未发现有效二维码",
+    "description": "未识别到二维码时的提示"
+  },
+  "clipboardNoImage": {
+    "message": "剪贴板中没有找到图片数据，请先复制一张图片",
+    "description": "无效粘贴时的提示"
+  },
+  "dragDropImageOnly": {
+    "message": "请拖拽图片文件",
+    "description": "拖放非图片文件时的提示"
+  },
+  "unsupportedFormat": {
+    "message": "不支持的图片格式：",
+    "description": "格式错误提示前缀"
+  },
+  "formatUnknown": {
+    "message": "未知",
+    "description": "未知格式占位符"
+  },
+  "recognitionFailed": {
+    "message": "二维码识别失败",
+    "description": "识别出错后的标题"
+  },
+  "unknownError": {
+    "message": "出现未知错误",
+    "description": "通用错误提示"
   }
 }

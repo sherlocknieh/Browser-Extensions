@@ -106,5 +106,71 @@
   "pasteImage": {
     "message": "Paste Image to Scan QR",
     "description": "Context menu item for pasting image to recognize QR code"
+  },
+  "pasteDialogTitle": {
+    "message": "Paste Image to Scan QR",
+    "description": "Dialog title"
+  },
+  "pasteDialogHint": {
+    "message": "Supports pasting, dragging, or clicking to select images",
+    "description": "Dialog subtitle"
+  },
+  "dropZoneText": {
+    "message": "Click to paste or drag image here",
+    "description": "Main text for drop zone"
+  },
+  "dropZoneHint": {
+    "message": "Supports Ctrl+V to paste from clipboard",
+    "description": "Hint text for drop zone"
+  },
+  "scanningText": {
+    "message": "Scanning QR code...",
+    "description": "Text shown while scanning"
+  },
+  "clearImageBtn": {
+    "message": "Clear Image",
+    "description": "Clear button text"
+  },
+  "closeBtn": {
+    "message": "Close",
+    "description": "Close button text"
+  },
+  "copyContent": {
+    "message": "Copy Content",
+    "description": "Copy button text"
+  },
+  "alreadyCopied": {
+    "message": "Copied",
+    "description": "Text shown after successful copy"
+  },
+  "recognitionSuccessTitle": {
+    "message": "Scanned successfully: ",
+    "description": "Success message prefix"
+  },
+  "recognitionFailedMsg": {
+    "message": "No valid QR code found",
+    "description": "Message when no QR code is found"
+  },
+  "clipboardNoImage": {
+    "message": "No image data found in clipboard, please copy an image first",
+    "description": "Hint for invalid paste"  },
+  "dragDropImageOnly": {
+    "message": "Please drag and drop an image file",
+    "description": "Notice for non-image drag and drop"
+  },
+  "unsupportedFormat": {
+    "message": "Unsupported image format: ",
+    "description": "Format error prefix"
+  },
+  "formatUnknown": {
+    "message": "Unknown",
+    "description": "Placeholder for unknown format"
+  },
+  "recognitionFailed": {
+    "message": "QR code recognition failed",
+    "description": "Error title after recognition fails"  },
+  "unknownError": {
+    "message": "An unknown error occurred",
+    "description": "Generic error message"
   }
 }
