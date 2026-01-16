@@ -102,5 +102,9 @@
   "confirm": {
     "message": "确定",
     "description": "确认按钮文本"
+  },
+  "pasteImage": {
+    "message": "粘贴图片识别二维码",
+    "description": "右键菜单项：粘贴图片识别二维码"
   }
 }

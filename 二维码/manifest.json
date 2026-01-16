@@ -34,5 +34,12 @@
         "libs/screenShotPlugin.umd.js",
         "content.js"]
     }
+  ],
+
+  "web_accessible_resources": [
+    {
+      "resources": ["libs/paste-image-dialog.html"],
+      "matches": ["<all_urls>"]
+    }
   ]
 }

@@ -9,6 +9,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         // 处理截图识别请求
         handleScreenshotQR();
     }
+    if (message.action === "pasteImageQR") {
+        // 处理粘贴图片识别请求
+        handlePasteImageQR();
+    }
+    if (message.action === "showPasteImageDialog") {
+        // 显示粘贴图片对话框
+        showPasteImageDialog();
+    }
 });
 
 
@@ -16,18 +24,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 function QRCodeReader(imageUrl) {
 
     LoadImage(imageUrl)             // 获取图片数据
-    .then(imageData => {
-        decodeQRCode(imageData);    // 解析二维码
-    })
-    .catch(error => {
-        Swal.fire({
-            toast: true,
-            icon: 'error',
-            title: chrome.i18n.getMessage('imageFetchFailed'),
-            text: error.message,
-            showCloseButton: true,
-        });                         // 显示错误信息
-    });
+        .then(imageData => {
+            decodeQRCode(imageData);    // 解析二维码
+        })
+        .catch(error => {
+            Swal.fire({
+                toast: true,
+                icon: 'error',
+                title: chrome.i18n.getMessage('imageFetchFailed'),
+                text: error.message,
+                showCloseButton: true,
+            });                         // 显示错误信息
+        });
 }
 
 
@@ -35,7 +43,7 @@ function QRCodeReader(imageUrl) {
 async function LoadImage(imageUrl) {
     // 检查是否跨域（本地文件 file: 链接视为跨域）
     if (!imageUrl.startsWith('file:') && new URL(imageUrl).origin === window.location.origin) {
-    // 未跨域：直接获取
+        // 未跨域：直接获取
         const img = document.createElement('img');
         img.src = imageUrl;
         await new Promise((resolve, reject) => {
@@ -44,18 +52,18 @@ async function LoadImage(imageUrl) {
         });
         return imgToData(img);
     } else {
-    // 跨域：通过 background 代理获取
+        // 跨域：通过 background 代理获取
         const loadingToast = Swal.fire({
             toast: true,
             icon: 'info',
             title: chrome.i18n.getMessage('fetchingImage'),
             text: chrome.i18n.getMessage('crossOriginNotice'),
             showCloseButton: true,
-            didOpen: () => {Swal.showLoading();}
+            didOpen: () => { Swal.showLoading(); }
         });
         return new Promise((resolve, reject) => {
             // 向 background 发起消息
-            chrome.runtime.sendMessage({action: "fetchImage", url: imageUrl}, (response) => {
+            chrome.runtime.sendMessage({ action: "fetchImage", url: imageUrl }, (response) => {
                 if (response && response.success) {
                     const img = new Image();
                     img.onload = () => resolve(imgToData(img));
@@ -68,7 +76,7 @@ async function LoadImage(imageUrl) {
             });
         });
     }
-    
+
     // 辅助函数：从图片元素获取图片数据
     function imgToData(img) {
         const canvas = document.createElement('canvas');
@@ -82,18 +90,19 @@ async function LoadImage(imageUrl) {
 
 
 // 二维码解析函数
-async function decodeQRCode(imageData) {
+function decodeQRCode(imageData) {
     // 先显示加载，再让浏览器完成一次渲染，避免 jsQR 同步阻塞导致弹窗不出现
     const loadingToast = Swal.fire({
         toast: true,
         icon: 'info',
         title: chrome.i18n.getMessage('decodingQR'),
-        didOpen: () => {Swal.showLoading();},
+        didOpen: () => { Swal.showLoading(); },
         showCloseButton: true
     });
     setTimeout(() => {
         const code = jsQR(imageData.data, imageData.width, imageData.height, {
-            inversionAttempts: "attemptBoth"});   // 支持反转色
+            inversionAttempts: "attemptBoth"
+        });   // 支持反转色
         loadingToast.close();
         if (code) {
             const result = code.data;
@@ -135,7 +144,7 @@ function handleScreenshotQR() {
     const screenShotHandler = new screenShotPlugin({
         enableWebRtc: true,  // 启用 WebRTC 来获取屏幕内容
         // 截图完成回调
-        completeCallback: ({base64, cutInfo}) => {
+        completeCallback: ({ base64, cutInfo }) => {
             // 获取到截图的 base64 数据，开始识别二维码
             QRCodeReader(base64);
             // 销毁截图容器
@@ -169,5 +178,293 @@ function handleScreenshotQR() {
                 showCloseButton: true
             });
         }
+    });
+
+    // 确保截图容器位于最顶层
+    setTimeout(() => {
+        // 截屏容器置顶（需完整定位和尺寸）
+        const screenshotContainer = document.getElementById('screenShotContainer');
+        if (screenshotContainer) {
+            screenshotContainer.style.zIndex = '2147483647';
+            screenshotContainer.style.position = 'fixed';
+            screenshotContainer.style.top = '0';
+            screenshotContainer.style.left = '0';
+            screenshotContainer.style.width = '100%';
+            screenshotContainer.style.height = '100%';
+        }
+
+        // 功能面板置顶
+        const panelIds = [
+            'toolPanel',
+            'optionIcoController',
+            'cutBoxSizePanel',
+            'optionPanel'
+        ];
+
+        panelIds.forEach(id => {
+            const panel = document.getElementById(id);
+            if (panel) {
+                panel.style.zIndex = '2147483647';
+                panel.style.position = 'fixed';
+            }
+        });
+    }, 100);
+}
+
+// 精简后的粘贴图片识别入口：仅调用对话框实现
+async function handlePasteImageQR() {
+    try {
+        // 防止重复创建对话框：若已存在则聚焦并返回
+        const existing = document.getElementById('qr-paste-dialog-container');
+        if (existing) {
+            try {
+                existing.style.zIndex = '2147483647';
+                const focusBtn = existing.querySelector('#qr-paste-btn') || existing.querySelector('button');
+                if (focusBtn && typeof focusBtn.focus === 'function') focusBtn.focus();
+            } catch (e) {
+                // ignore
+            }
+            return;
+        }
+        // 创建对话框容器并加载模板与样式
+        const dialogContainer = document.createElement('div');
+        dialogContainer.id = 'qr-paste-dialog-container';
+
+        const loadDialogAssets = async () => {
+            try {
+                const htmlResponse = await fetch(chrome.runtime.getURL('libs/paste-image-dialog.html'));
+                return await htmlResponse.text();
+            } catch (error) {
+                console.error('加载对话框资源失败:', error);
+                return null;
+            }
+        };
+
+        const content = await loadDialogAssets();
+        if (!content) throw new Error('无法加载对话框资源');
+        dialogContainer.innerHTML = content;
+        document.body.appendChild(dialogContainer);
+
+        // 下面为对话框内逻辑（保留原实现，但以更小的、局部函数形式组织）
+        const overlay = document.getElementById('qr-paste-dialog-overlay');
+        const dialog = document.getElementById('qr-paste-dialog');
+        // 确保对话框或容器可聚焦，以便接收系统 paste 事件和键盘粘贴
+        if (dialog) {
+            try {
+                dialog.tabIndex = -1;
+                dialog.focus();
+                dialog.addEventListener('click', () => { try { dialog.focus(); } catch (e) {} });
+            } catch (e) {}
+        } else {
+            try { dialogContainer.tabIndex = -1; dialogContainer.focus(); } catch (e) {}
+        }
+        const dropZone = document.getElementById('qr-drop-zone');
+        const imagePreview = document.getElementById('qr-image-preview');
+        const fileInput = document.getElementById('qr-file-input');
+        const clearBtn = document.getElementById('qr-clear-btn');
+        const closeBtn = document.getElementById('qr-close-btn');
+        const loading = document.getElementById('qr-loading');
+        const result = document.getElementById('qr-result');
+        const resultText = document.getElementById('qr-result-text');
+        const resultButtons = document.getElementById('qr-result-buttons');
+
+        let currentImageData = null;
+        const supportedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/bmp', 'image/gif', 'image/webp'];
+
+        function closeDialog() {
+            dialogContainer.remove();
+            document.removeEventListener('keydown', keydownHandler);
+            try { document.removeEventListener('paste', pasteHandler); } catch (e) { /* ignore */ }
+        }
+
+        closeBtn.addEventListener('click', closeDialog);
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) closeDialog(); });
+
+        clearBtn.addEventListener('click', clearImage);
+
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); if (!currentImageData) dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); });
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault(); dropZone.classList.remove('dragover'); if (currentImageData) return;
+            const files = e.dataTransfer.files; if (files.length === 0) { showResult('请拖拽图片文件', 'error'); return; }
+            const file = files[0]; if (supportedTypes.includes(file.type.toLowerCase())) loadImageFromBlob(file); else showResult(`不支持的图片格式：${file.type || '未知'}`, 'error');
+        });
+
+        dropZone.addEventListener('click', () => { if (!currentImageData) fileInput.click(); });
+        fileInput.addEventListener('change', (e) => { const file = e.target.files[0]; if (!file) return; if (supportedTypes.includes(file.type.toLowerCase())) loadImageFromBlob(file); else showResult(`不支持的图片格式：${file.type || '未知'}`, 'error'); });
+
+        // 处理键盘粘贴（Ctrl/Cmd+V）与关闭键
+        const keydownHandler = (e) => {
+            if ((e.ctrlKey || e.metaKey) && (e.key === 'v' || e.key === 'V')) {
+                // 当对话框或其中元素有焦点时，触发粘贴处理
+                if (dialog && dialog.contains(document.activeElement)) {
+                    e.preventDefault();
+                    handlePaste();
+                }
+            } else if (e.key === 'Escape') {
+                closeDialog();
+            }
+        };
+        document.addEventListener('keydown', keydownHandler);
+
+        // 直接响应系统 paste 事件（更可靠），优先从 event 获取图片数据
+        const pasteHandler = (e) => {
+            try {
+                if (!dialog || !document.body.contains(dialog)) return;
+                const items = e.clipboardData && e.clipboardData.items;
+                if (!items) return;
+                for (const item of items) {
+                    if (item && item.type && item.type.startsWith('image/')) {
+                        const file = item.getAsFile();
+                        if (file) {
+                            e.preventDefault();
+                            loadImageFromBlob(file);
+                            return;
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error('paste event error', err);
+            }
+        };
+        document.addEventListener('paste', pasteHandler);
+
+        async function handlePaste() {
+            try {
+                if (!navigator.clipboard || !navigator.clipboard.read) { showResult('您的浏览器不支持剪贴板读取功能', 'error'); return; }
+                const clipboardItems = await navigator.clipboard.read();
+                for (const clipboardItem of clipboardItems) {
+                    for (const type of clipboardItem.types) {
+                        if (type.startsWith('image/')) { const blob = await clipboardItem.getType(type); loadImageFromBlob(blob); return; }
+                    }
+                }
+                showResult('剪贴板中没有找到图片数据，请先复制一张图片', 'error');
+            } catch (error) {
+                console.error('粘贴失败:', error);
+                let errorMessage = '读取剪贴板失败';
+                if (error.name === 'NotAllowedError') errorMessage = '剪贴板访问被拒绝。请检查浏览器设置，确保允许访问剪贴板权限。';
+                else if (error.name === 'NotFoundError') errorMessage = '剪贴板为空或没有图片数据，请先复制一张图片';
+                else if (error.name === 'SecurityError') errorMessage = '安全限制：剪贴板API需要HTTPS环境或localhost。';
+                showResult(errorMessage, 'error');
+            }
+        }
+
+        function loadImageFromBlob(blob) {
+            const reader = new FileReader();
+            reader.onload = (e) => { currentImageData = e.target.result; displayImage(currentImageData); clearResult(); };
+            reader.onerror = () => showResult('图片加载失败', 'error');
+            reader.readAsDataURL(blob);
+        }
+
+        function displayImage(dataUrl) { 
+            imagePreview.src = dataUrl; 
+            imagePreview.style.display = 'block'; 
+            dropZone.classList.add('has-image'); 
+            const uploadIcon = dropZone.querySelector('.qr-upload-icon'); 
+            const uploadText = dropZone.querySelector('.qr-upload-text'); 
+            const uploadHint = dropZone.querySelector('.qr-upload-hint'); 
+            if (uploadIcon) uploadIcon.style.display = 'none'; 
+            if (uploadText) uploadText.style.display = 'none'; 
+            if (uploadHint) uploadHint.style.display = 'none'; 
+            // 有图片后自动开始识别
+            scanQRCode();
+        }
+
+        function clearImage() { 
+            currentImageData = null; 
+            imagePreview.src = ''; 
+            imagePreview.style.display = 'none'; 
+            dropZone.classList.remove('has-image'); 
+            const uploadIcon = dropZone.querySelector('.qr-upload-icon'); 
+            const uploadText = dropZone.querySelector('.qr-upload-text'); 
+            const uploadHint = dropZone.querySelector('.qr-upload-hint'); 
+            if (uploadIcon) uploadIcon.style.display = 'block'; 
+            if (uploadText) uploadText.style.display = 'block'; 
+            if (uploadHint) uploadHint.style.display = 'block'; 
+            clearResult(); 
+            fileInput.value = ''; 
+        }
+
+        function showResult(message, type) { 
+            result.className = `qr-result ${type}`; 
+            resultText.textContent = message; 
+            resultButtons.innerHTML = ''; 
+            result.style.display = 'block'; 
+        }
+
+        function showSuccess(qrData) {
+            result.className = 'qr-result success'; resultText.textContent = '识别成功: ' + qrData;
+            const miniBtnStyle = 'padding: 6px 12px; border: none; border-radius: 4px; font-size: 12px; cursor: pointer; transition: all 0.2s ease;';
+            const openBtn = document.createElement('button'); 
+            openBtn.className = 'qr-mini-btn qr-mini-btn-open'; 
+            openBtn.style.cssText = miniBtnStyle + 'background: #007bff; color: white;';
+            openBtn.textContent = '打开链接'; 
+            openBtn.onclick = () => {
+                let url = qrData.trim(); if (!url.startsWith('http://') && !url.startsWith('https://')) { if (url.includes('.') && !url.includes(' ')) url = 'https://' + url; else url = `https://www.google.com/search?q=${encodeURIComponent(qrData)}`; }
+                try { const parsedUrl = new URL(url); if (!['http:', 'https:'].includes(parsedUrl.protocol)) throw new Error('不支持的协议'); window.open(url, '_blank'); } catch (error) { showResult('链接格式无效，无法打开', 'error'); }
+            };
+            const copyBtn = document.createElement('button'); 
+            copyBtn.className = 'qr-mini-btn qr-mini-btn-copy'; 
+            copyBtn.style.cssText = miniBtnStyle + 'background: #6c757d; color: white;';
+            copyBtn.textContent = '复制内容'; 
+            copyBtn.onclick = () => { navigator.clipboard.writeText(qrData); copyBtn.textContent = '已复制'; setTimeout(() => { copyBtn.textContent = '复制内容'; }, 2000); };
+            resultButtons.innerHTML = ''; if (qrData.startsWith('http') || qrData.includes('.')) resultButtons.appendChild(openBtn); resultButtons.appendChild(copyBtn); 
+            result.style.display = 'block';
+        }
+
+        function clearResult() { result.style.display = 'none'; result.className = 'qr-result'; }
+
+        async function scanQRCode() {
+            if (!currentImageData) return;
+            loading.style.display = 'block';
+            clearResult();
+            setTimeout(async () => {
+                try {
+                    let imageData;
+                    // 优先使用已展示的图片元素获取像素数据，避免 dataURL/new Image 的潜在问题
+                    if (imagePreview && imagePreview.src) {
+                        imageData = await (async () => {
+                            const canvas = document.createElement('canvas');
+                            const ctx = canvas.getContext('2d');
+                            canvas.width = imagePreview.naturalWidth || imagePreview.width;
+                            canvas.height = imagePreview.naturalHeight || imagePreview.height;
+                            ctx.drawImage(imagePreview, 0, 0);
+                            return ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        })();
+                    } else {
+                        imageData = await getImageData(currentImageData);
+                    }
+
+                    const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "attemptBoth" });
+                    loading.style.display = 'none';
+                    if (code) {
+                        showSuccess(code.data);
+                    } else {
+                        showResult('未发现有效二维码', 'error');
+                    }
+                } catch (error) {
+                    loading.style.display = 'none';
+                    console.error('识别失败:', error);
+                    showResult('二维码识别失败: ' + (error && error.message ? error.message : String(error)), 'error');
+                }
+            }, 100);
+        }
+
+        async function getImageData(dataUrl) { return new Promise((resolve, reject) => { const img = new Image(); img.onload = () => { const canvas = document.createElement('canvas'); const ctx = canvas.getContext('2d'); canvas.width = img.width; canvas.height = img.height; ctx.drawImage(img, 0, 0); resolve(ctx.getImageData(0, 0, canvas.width, canvas.height)); }; img.onerror = () => reject(new Error('图片加载失败')); img.src = dataUrl; }); }
+
+    } catch (error) {
+        console.error('显示对话框失败:', error);
+        Swal.fire({ toast: true, icon: 'error', title: chrome.i18n.getMessage('error'), text: '显示对话框失败: ' + error.message, showCloseButton: true, confirmButtonText: chrome.i18n.getMessage('confirm') });
+    }
+}
+
+
+// 将 Blob 转换为 Data URL 的辅助函数
+function blobToDataUrl(blob) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(blob);
     });
 }

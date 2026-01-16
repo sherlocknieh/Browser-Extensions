@@ -102,5 +102,9 @@
   "confirm": {
     "message": "OK",
     "description": "Confirm button text"
+  },
+  "pasteImage": {
+    "message": "Paste Image to Scan QR",
+    "description": "Context menu item for pasting image to recognize QR code"
   }
 }

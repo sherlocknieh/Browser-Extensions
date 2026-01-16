@@ -27,11 +27,17 @@ function createContextMenus() {
             title: chrome.i18n.getMessage("decodeQR"),
             contexts: ["image"]
         });
-        // 创建截图识别菜单（未来功能）
+        // 截图识别二维码
         chrome.contextMenus.create({
             id: "screenshotQR",
             title: chrome.i18n.getMessage("screenShot"),
             contexts: ["action", "image"]
+        });
+        // 粘贴图片识别二维码
+        chrome.contextMenus.create({
+            id: "pasteImageQR",
+            title: chrome.i18n.getMessage("pasteImage"),
+            contexts: ["action"]
         });
     });
 }
@@ -61,9 +67,14 @@ function handleContextMenuClick(info, tab) {
         // 直接打开popup
         chrome.action.openPopup();
     } else if (info.menuItemId === "screenshotQR") {
-        // 截图识别二维码（未来功能）
+        // 截图识别二维码
         chrome.tabs.sendMessage(tab.id, {
             action: "screenshotQR"
+        });
+    } else if (info.menuItemId === "pasteImageQR") {
+        // 粘贴图片识别二维码
+        chrome.tabs.sendMessage(tab.id, {
+            action: "pasteImageQR"
         });
     }
 }
