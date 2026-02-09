@@ -1,33 +1,34 @@
-// 右键菜单创建函数
+// 创建右键菜单
 function createContextMenus() {
     // 清理旧菜单
     chrome.contextMenus.removeAll(() => {
-        
-        // 创建页面URL生成二维码菜单
+        // 生成:
+        // 当前页面URL生成二维码
         chrome.contextMenus.create({
             id: "generateQR_page",
             title: chrome.i18n.getMessage("generateQR_page"),
             contexts: ["page"]
         });
-        // 创建链接生成二维码菜单
+        // 链接生成二维码
         chrome.contextMenus.create({
             id: "generateQR_link",
             title: chrome.i18n.getMessage("generateQR_link"),
             contexts: ["link"]
         });
-        // 创建选中文字生成二维码菜单
+        // 选中文字生成二维码
         chrome.contextMenus.create({
             id: "generateQR_selection",
             title: chrome.i18n.getMessage("generateQR_selection"),
             contexts: ["selection"]
         });
-        // 创建二维码识别菜单
+        // 识别:
+        // 图片链接识别二维码
         chrome.contextMenus.create({
             id: "decodeQR",
             title: chrome.i18n.getMessage("decodeQR"),
             contexts: ["image"]
         });
-        // 截图识别二维码
+        // 截屏识别二维码
         chrome.contextMenus.create({
             id: "screenshotQR",
             title: chrome.i18n.getMessage("screenShot"),

@@ -55,10 +55,6 @@
     "message": "Can't read the image data",
     "description": "Error message for image loading failure"
   },
-  "recognitionFailed": {
-    "message": "Scan failed",
-    "description": "Error dialog title for recognition failure"
-  },
   "noValidQRCode": {
     "message": "No QR code found",
     "description": "Error message when no QR code is found"
@@ -116,11 +112,11 @@
     "description": "Dialog subtitle"
   },
   "dropZoneText": {
-    "message": "Click to paste or drag image here",
+    "message": "Click to load local image",
     "description": "Main text for drop zone"
   },
   "dropZoneHint": {
-    "message": "Supports Ctrl+V to paste from clipboard",
+    "message": "Ctrl+V to paste from clipboard",
     "description": "Hint text for drop zone"
   },
   "scanningText": {

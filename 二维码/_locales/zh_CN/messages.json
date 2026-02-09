@@ -55,10 +55,6 @@
     "message": "无法加载图片数据",
     "description": "图片加载失败错误信息"
   },
-  "recognitionFailed": {
-    "message": "识别失败",
-    "description": "识别失败错误标题"
-  },
   "noValidQRCode": {
     "message": "未发现有效二维码",
     "description": "未找到二维码的错误信息"
@@ -104,7 +100,7 @@
     "description": "确认按钮文本"
   },
   "pasteImage": {
-    "message": "粘贴图片识别二维码",
+    "message": "粘贴/上传图片识别二维码",
     "description": "右键菜单项：粘贴图片识别二维码"
   },
   "pasteDialogTitle": {
@@ -116,11 +112,11 @@
     "description": "对话框副标题"
   },
   "dropZoneText": {
-    "message": "点击粘贴图片或拖拽图片到此处",
+    "message": "点击加载本地图片",
     "description": "拖拽区域主文字"
   },
   "dropZoneHint": {
-    "message": "支持 Ctrl+V 粘贴剪贴板图片",
+    "message": "Ctrl+V 粘贴剪贴板图片",
     "description": "拖拽区域副文字"
   },
   "scanningText": {
