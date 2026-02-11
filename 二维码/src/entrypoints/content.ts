@@ -1,22 +1,76 @@
-// 监听 background 消息
-chrome.runtime.onMessage.addListener((message, _sender, _sendResponse) => {
-    // 处理二维码识别请求
-    if (message.action === "decodeQR" && message.imageUrl) {
-        handleImageLink(message.imageUrl);
-    }
-    // 处理截图识别请求
-    if (message.action === "screenshotQR") {
-        handleScreenshot();           //  截图识别
-    }
-    // 处理粘贴图片识别请求
-    if (message.action === "pasteImageQR") {
-        handlePasteImage();           //  粘贴识别
-    }
+import screenShotPlugin from 'js-web-screen-shot';    // 截图工具库
+import Swal from 'sweetalert2';                       // 消息弹窗库
+import jsQR from 'jsqr';                              // 二维码解析库
+import { registerPasteImageDialog } from '@/components/PasteImageDialog';
+
+import { createApp } from 'vue';
+import HelloWorld from '@/components/HelloWorld.vue';
+
+// WXT 规定的内容脚本入口
+export default defineContentScript({
+    matches: ['<all_urls>'],    // [必须选项] 脚本适用范围: 所有页面
+    matchAboutBlank: true,      // 允许在 about:blank 页面运行
+    cssInjectionMode: 'ui',     // CSS 只注入到 Shadow Root 中
+
+    // Executed when content script is loaded, can be async
+    // ctx 对象中提供了一些实用的生命周期管理工具, 用于资源清理, 防止内存泄漏
+    async main(ctx) {
+
+        // 创建 UI 组件并挂载到 Shadow Root 中
+        const ui = await createShadowRootUi(ctx, {
+            name: 'wxt-vue-ui',  // UI 名称, 用于区分不同 UI 实例
+            anchor: 'body',      // UI 挂载位置
+            append: 'last',      // 在 anchor 内的添加方式
+            position: 'modal',  // inline: 嵌入文档底部, overlay: position: absolute;, modal: position: fixed;）
+            // 当 UI 被挂载时创建 Vue 实例并挂载到容器
+            onMount: (container) => {
+                // 为容器添加类名以便于修改样式
+                container.classList.add('my-extension-root');
+                // 直接设置容器样式
+                Object.assign(container.style, {
+                    position: 'fixed',
+                    bottom: '20px',
+                    right: '20px',
+                    zIndex: '2147483647', // 设为最大值，确保在最顶层
+                });
+                const app = createApp(HelloWorld);
+                app.mount(container);
+                return app;
+            },
+            // 当 UI 被卸载时销毁 Vue 实例
+            onRemove: (app) => {
+                app?.unmount();
+            },
+        });
+        ui.mount(); // 挂载 UI
+
+        // 监听某些条件动态移除 UI
+        // ctx.onInvalidated(() => ui.remove());
+
+        // 监听 background 消息
+        browser.runtime.onMessage.addListener((message, _sender, _sendResponse) => {
+            // 处理二维码识别请求
+            if (message.action === "decodeQR" && message.imageUrl) {
+                handleImageLink(message.imageUrl);    //  网页图片识别
+            }
+            // 处理截图识别请求
+            if (message.action === "screenshotQR") {
+                handleScreenshot();           //  截图识别
+            }
+            // 处理粘贴图片识别请求
+            if (message.action === "pasteImageQR") {
+                handlePasteImage();           //  粘贴识别
+            }
+        });
+
+
+    },
 });
 
 
+
 // 图片链接处理流程
-function handleImageLink(imageUrl) {
+function handleImageLink(imageUrl: string) {
 
     LoadImage(imageUrl)             // 获取图片数据
         .then(imageData => {
@@ -26,7 +80,7 @@ function handleImageLink(imageUrl) {
             Swal.fire({
                 toast: true,
                 icon: 'error',
-                title: chrome.i18n.getMessage('imageFetchFailed'),
+                title: browser.i18n.getMessage('imageFetchFailed'),
                 text: error.message,
                 showCloseButton: true,
             });                         // 显示错误信息
@@ -34,15 +88,15 @@ function handleImageLink(imageUrl) {
 
 
     // 图片链接 => 图片数据
-    async function LoadImage(imageUrl) {
+    async function LoadImage(imageUrl: string): Promise<ImageData> {
         // 检查是否跨域（本地文件 file: 链接视为跨域）
         if (!imageUrl.startsWith('file:') && new URL(imageUrl).origin === window.location.origin) {
             // 未跨域：直接获取
             const img = document.createElement('img');
             img.src = imageUrl;
-            await new Promise((resolve, reject) => {
+            await new Promise<void>((resolve, reject) => {
                 img.onload = () => resolve();
-                img.onerror = () => reject(new Error(chrome.i18n.getMessage('imageLoadFailed')));
+                img.onerror = () => reject(new Error(browser.i18n.getMessage('imageLoadFailed')));
             });
             return imgToData(img);
         } else {
@@ -50,21 +104,21 @@ function handleImageLink(imageUrl) {
             const loadingToast = Swal.fire({
                 toast: true,
                 icon: 'info',
-                title: chrome.i18n.getMessage('fetchingImage'),
-                text: chrome.i18n.getMessage('crossOriginNotice'),
+                title: browser.i18n.getMessage('fetchingImage'),
+                text: browser.i18n.getMessage('crossOriginNotice'),
                 showCloseButton: true,
                 didOpen: () => { Swal.showLoading(); }
             });
             return new Promise((resolve, reject) => {
                 // 向 background 发起消息
-                chrome.runtime.sendMessage({ action: "fetchImage", url: imageUrl }, (response) => {
+                browser.runtime.sendMessage({ action: "fetchImage", url: imageUrl }, (response) => {
                     if (response && response.success) {
                         const img = new Image();
                         img.onload = () => resolve(imgToData(img));
-                        img.onerror = () => reject(new Error(chrome.i18n.getMessage('imageLoadFailed')));
+                        img.onerror = () => reject(new Error(browser.i18n.getMessage('imageLoadFailed')));
                         img.src = response.dataUrl;
                     } else {
-                        reject(new Error(response?.error || chrome.i18n.getMessage('proxyFetchFailed')));
+                        reject(new Error(response?.error || browser.i18n.getMessage('proxyFetchFailed')));
                     }
                     loadingToast.close();
                 });
@@ -72,9 +126,10 @@ function handleImageLink(imageUrl) {
         }
 
         // 辅助函数：从图片元素获取图片数据
-        function imgToData(img) {
+        function imgToData(img: HTMLImageElement) {
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
+            if (!ctx) throw new Error('无法获取 canvas 2d 上下文');
             canvas.width = img.naturalWidth || img.width;
             canvas.height = img.naturalHeight || img.height;
             ctx.drawImage(img, 0, 0);
@@ -84,12 +139,12 @@ function handleImageLink(imageUrl) {
 
 
     // 图片数据 => 解析结果
-    function decodeQRCode(imageData) {
+    function decodeQRCode(imageData: ImageData) {
         // 显示"解析中"弹窗
         const loadingToast = Swal.fire({
             toast: true,
             icon: 'info',
-            title: chrome.i18n.getMessage('decodingQR'),
+            title: browser.i18n.getMessage('decodingQR'),
             didOpen: () => { Swal.showLoading(); },
             showCloseButton: true
         });
@@ -108,11 +163,11 @@ function handleImageLink(imageUrl) {
                 Swal.fire({
                     toast: true,
                     icon: 'success',
-                    title: chrome.i18n.getMessage('recognitionSuccess'),
+                    title: browser.i18n.getMessage('recognitionSuccess'),
                     text: result,
                     showCancelButton: true,
-                    confirmButtonText: chrome.i18n.getMessage('openLink'),
-                    cancelButtonText: chrome.i18n.getMessage('copyLink'),
+                    confirmButtonText: browser.i18n.getMessage('openLink'),
+                    cancelButtonText: browser.i18n.getMessage('copyLink'),
                     showCloseButton: true
                 }).then((res) => {
                     if (res.isConfirmed) {
@@ -127,9 +182,9 @@ function handleImageLink(imageUrl) {
                 Swal.fire({
                     toast: true,
                     icon: 'warning',
-                    title: chrome.i18n.getMessage('recognitionFailed'),
-                    text: chrome.i18n.getMessage('noValidQRCode'),
-                    confirmButtonText: chrome.i18n.getMessage('confirm'),
+                    title: browser.i18n.getMessage('recognitionFailed'),
+                    text: browser.i18n.getMessage('noValidQRCode'),
+                    confirmButtonText: browser.i18n.getMessage('confirm'),
                     showCloseButton: true
                 });
             }
@@ -162,7 +217,7 @@ function handleScreenshot() {
                 Swal.fire({
                     toast: true,
                     icon: 'warning',
-                    title: chrome.i18n.getMessage('screenshotFailed'),
+                    title: browser.i18n.getMessage('screenshotFailed'),
                     text: response.msg,
                     showCloseButton: true
                 });
@@ -173,7 +228,7 @@ function handleScreenshot() {
             Swal.fire({
                 toast: true,
                 icon: 'error',
-                title: chrome.i18n.getMessage('screenshotCancelled'),
+                title: browser.i18n.getMessage('screenshotCancelled'),
                 text: response.msg,
                 showCloseButton: true
             });
@@ -218,58 +273,53 @@ async function handlePasteImage() {
     if (existing) {
         try {
             existing.style.zIndex = '2147483647';
-            const focusBtn = existing.querySelector('#qr-paste-btn') || existing.querySelector('button');
-            if (focusBtn && typeof focusBtn.focus === 'function') focusBtn.focus();
+            if (typeof existing.focus === 'function') existing.focus();
         } catch (e) {
             // ignore
         }
         return;
     }
-    // 创建对话框容器并加载模板与样式
-    const dialogContainer = document.createElement('div');
+    registerPasteImageDialog();
+
+    // 创建对话框容器并挂载 Web Component
+    const dialogContainer = document.createElement('qr-paste-dialog');
     dialogContainer.id = 'qr-paste-dialog-container';
-
-    const loadDialogAssets = async () => {
-        try {
-            const htmlResponse = await fetch(chrome.runtime.getURL('libs/paste-image-dialog.html'));
-            let htmlContent = await htmlResponse.text();
-            // 替换多语言占位符
-            return htmlContent.replace(/__MSG_(\w+)__/g, (match, key) => {
-                return chrome.i18n.getMessage(key) || match;
-            });
-        } catch (error) {
-            console.error('加载对话框资源失败:', error);
-            return null;
-        }
-    };
-
-    const content = await loadDialogAssets();
-    if (!content) throw new Error('无法加载对话框资源');
-    dialogContainer.innerHTML = content;
     document.body.appendChild(dialogContainer);
 
+    const shadow = dialogContainer.shadowRoot;
+    if (!shadow) throw new Error('无法初始化对话框组件');
+
+    // 替换多语言占位符
+    shadow.querySelectorAll('[data-i18n]').forEach((node) => {
+        const key = node.getAttribute('data-i18n');
+        if (!key) return;
+        const message = browser.i18n.getMessage(key);
+        if (message) node.textContent = message;
+    });
+
     // 下面为对话框内逻辑（保留原实现，但以更小的、局部函数形式组织）
-    const overlay = document.getElementById('qr-paste-dialog-overlay');
-    const dialog = document.getElementById('qr-paste-dialog');
-    // 确保对话框或容器可聚焦，以便接收系统 paste 事件和键盘粘贴
-    if (dialog) {
-        try {
-            dialog.tabIndex = -1;
-            dialog.focus();
-            dialog.addEventListener('click', () => { try { dialog.focus(); } catch (e) { } });
-        } catch (e) { }
-    } else {
-        try { dialogContainer.tabIndex = -1; dialogContainer.focus(); } catch (e) { }
+    const overlay = shadow.getElementById('qr-paste-dialog-overlay');
+    const dialog = shadow.getElementById('qr-paste-dialog');
+    if (!overlay || !dialog) {
+        throw new Error('对话框组件缺少必要元素');
     }
-    const dropZone = document.getElementById('qr-drop-zone');
-    const imagePreview = document.getElementById('qr-image-preview');
-    const fileInput = document.getElementById('qr-file-input');
-    const clearBtn = document.getElementById('qr-clear-btn');
-    const closeBtn = document.getElementById('qr-close-btn');
-    const loading = document.getElementById('qr-loading');
-    const result = document.getElementById('qr-result');
-    const resultText = document.getElementById('qr-result-text');
-    const resultButtons = document.getElementById('qr-result-buttons');
+
+    // 确保对话框或容器可聚焦，以便接收系统 paste 事件和键盘粘贴
+    try {
+        dialog.tabIndex = -1;
+        dialog.focus();
+        dialog.addEventListener('click', () => { try { dialog.focus(); } catch (e) { } });
+        dialogContainer.tabIndex = -1;
+    } catch (e) { }
+    const dropZone = shadow.getElementById('qr-drop-zone');
+    const imagePreview = shadow.getElementById('qr-image-preview');
+    const fileInput = shadow.getElementById('qr-file-input');
+    const clearBtn = shadow.getElementById('qr-clear-btn');
+    const closeBtn = shadow.getElementById('qr-close-btn');
+    const loading = shadow.getElementById('qr-loading');
+    const result = shadow.getElementById('qr-result');
+    const resultText = shadow.getElementById('qr-result-text');
+    const resultButtons = shadow.getElementById('qr-result-buttons');
 
     let currentImageData = null;
     const supportedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/bmp', 'image/gif', 'image/webp'];
@@ -278,6 +328,10 @@ async function handlePasteImage() {
         dialogContainer.remove();
         document.removeEventListener('keydown', keydownHandler);
         try { document.removeEventListener('paste', pasteHandler); } catch (e) { /* ignore */ }
+    }
+
+    if (!dropZone || !imagePreview || !fileInput || !clearBtn || !closeBtn || !loading || !result || !resultText || !resultButtons) {
+        throw new Error('对话框组件缺少必要元素');
     }
 
     closeBtn.addEventListener('click', closeDialog);
@@ -289,18 +343,18 @@ async function handlePasteImage() {
     dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); });
     dropZone.addEventListener('drop', (e) => {
         e.preventDefault(); dropZone.classList.remove('dragover'); if (currentImageData) return;
-        const files = e.dataTransfer.files; if (files.length === 0) { showResult(chrome.i18n.getMessage('dragDropImageOnly'), 'error'); return; }
-        const file = files[0]; if (supportedTypes.includes(file.type.toLowerCase())) loadImageFromBlob(file); else showResult(`${chrome.i18n.getMessage('unsupportedFormat')}${file.type || chrome.i18n.getMessage('formatUnknown')}`, 'error');
+        const files = e.dataTransfer.files; if (files.length === 0) { showResult(browser.i18n.getMessage('dragDropImageOnly'), 'error'); return; }
+        const file = files[0]; if (supportedTypes.includes(file.type.toLowerCase())) loadImageFromBlob(file); else showResult(`${browser.i18n.getMessage('unsupportedFormat')}${file.type || browser.i18n.getMessage('formatUnknown')}`, 'error');
     });
 
     dropZone.addEventListener('click', () => { if (!currentImageData) fileInput.click(); });
-    fileInput.addEventListener('change', (e) => { const file = e.target.files[0]; if (!file) return; if (supportedTypes.includes(file.type.toLowerCase())) loadImageFromBlob(file); else showResult(`${chrome.i18n.getMessage('unsupportedFormat')}${file.type || chrome.i18n.getMessage('formatUnknown')}`, 'error'); });
+    fileInput.addEventListener('change', (e) => { const file = e.target.files[0]; if (!file) return; if (supportedTypes.includes(file.type.toLowerCase())) loadImageFromBlob(file); else showResult(`${browser.i18n.getMessage('unsupportedFormat')}${file.type || browser.i18n.getMessage('formatUnknown')}`, 'error'); });
 
     // 处理键盘粘贴（Ctrl/Cmd+V）与关闭键
     const keydownHandler = (e) => {
         if ((e.ctrlKey || e.metaKey) && (e.key === 'v' || e.key === 'V')) {
             // 当对话框或其中元素有焦点时，触发粘贴处理
-            if (dialog && dialog.contains(document.activeElement)) {
+            if (dialogContainer.contains(document.activeElement)) {
                 e.preventDefault();
                 handlePaste();
             }
@@ -334,17 +388,17 @@ async function handlePasteImage() {
 
     async function handlePaste() {
         try {
-            if (!navigator.clipboard || !navigator.clipboard.read) { showResult(chrome.i18n.getMessage('unknownError'), 'error'); return; }
+            if (!navigator.clipboard || !navigator.clipboard.read) { showResult(browser.i18n.getMessage('unknownError'), 'error'); return; }
             const clipboardItems = await navigator.clipboard.read();
             for (const clipboardItem of clipboardItems) {
                 for (const type of clipboardItem.types) {
                     if (type.startsWith('image/')) { const blob = await clipboardItem.getType(type); loadImageFromBlob(blob); return; }
                 }
             }
-            showResult(chrome.i18n.getMessage('clipboardNoImage'), 'error');
+            showResult(browser.i18n.getMessage('clipboardNoImage'), 'error');
         } catch (error) {
             console.error('粘贴失败:', error);
-            let errorMessage = chrome.i18n.getMessage('unknownError');
+            let errorMessage = browser.i18n.getMessage('unknownError');
             showResult(errorMessage, 'error');
         }
     }
@@ -352,7 +406,7 @@ async function handlePasteImage() {
     function loadImageFromBlob(blob) {
         const reader = new FileReader();
         reader.onload = (e) => { currentImageData = e.target.result; displayImage(currentImageData); clearResult(); };
-        reader.onerror = () => showResult(chrome.i18n.getMessage('imageLoadFailed'), 'error');
+        reader.onerror = () => showResult(browser.i18n.getMessage('imageLoadFailed'), 'error');
         reader.readAsDataURL(blob);
     }
 
@@ -393,21 +447,21 @@ async function handlePasteImage() {
     }
 
     function showSuccess(qrData) {
-        result.className = 'qr-result success'; resultText.textContent = chrome.i18n.getMessage('recognitionSuccessTitle') + qrData;
+        result.className = 'qr-result success'; resultText.textContent = browser.i18n.getMessage('recognitionSuccessTitle') + qrData;
         const miniBtnStyle = 'padding: 6px 12px; border: none; border-radius: 4px; font-size: 12px; cursor: pointer; transition: all 0.2s ease;';
         const openBtn = document.createElement('button');
         openBtn.className = 'qr-mini-btn qr-mini-btn-open';
         openBtn.style.cssText = miniBtnStyle + 'background: #007bff; color: white;';
-        openBtn.textContent = chrome.i18n.getMessage('openLink');
+        openBtn.textContent = browser.i18n.getMessage('openLink');
         openBtn.onclick = () => {
             let url = qrData.trim(); if (!url.startsWith('http://') && !url.startsWith('https://')) { if (url.includes('.') && !url.includes(' ')) url = 'https://' + url; else url = `https://www.google.com/search?q=${encodeURIComponent(qrData)}`; }
-            try { const parsedUrl = new URL(url); if (!['http:', 'https:'].includes(parsedUrl.protocol)) throw new Error('不支持的协议'); window.open(url, '_blank'); } catch (error) { showResult(chrome.i18n.getMessage('unknownError'), 'error'); }
+            try { const parsedUrl = new URL(url); if (!['http:', 'https:'].includes(parsedUrl.protocol)) throw new Error('不支持的协议'); window.open(url, '_blank'); } catch (error) { showResult(browser.i18n.getMessage('unknownError'), 'error'); }
         };
         const copyBtn = document.createElement('button');
         copyBtn.className = 'qr-mini-btn qr-mini-btn-copy';
         copyBtn.style.cssText = miniBtnStyle + 'background: #6c757d; color: white;';
-        copyBtn.textContent = chrome.i18n.getMessage('copyContent');
-        copyBtn.onclick = () => { navigator.clipboard.writeText(qrData); copyBtn.textContent = chrome.i18n.getMessage('alreadyCopied'); setTimeout(() => { copyBtn.textContent = chrome.i18n.getMessage('copyContent'); }, 2000); };
+        copyBtn.textContent = browser.i18n.getMessage('copyContent');
+        copyBtn.onclick = () => { navigator.clipboard.writeText(qrData); copyBtn.textContent = browser.i18n.getMessage('alreadyCopied'); setTimeout(() => { copyBtn.textContent = browser.i18n.getMessage('copyContent'); }, 2000); };
         resultButtons.innerHTML = ''; if (qrData.startsWith('http') || qrData.includes('.')) resultButtons.appendChild(openBtn); resultButtons.appendChild(copyBtn);
         result.style.display = 'block';
     }
@@ -440,12 +494,12 @@ async function handlePasteImage() {
                 if (code) {
                     showSuccess(code.data);
                 } else {
-                    showResult(chrome.i18n.getMessage('recognitionFailedMsg'), 'error');
+                    showResult(browser.i18n.getMessage('recognitionFailedMsg'), 'error');
                 }
             } catch (error) {
                 loading.style.display = 'none';
                 console.error('识别失败:', error);
-                showResult(chrome.i18n.getMessage('recognitionFailed') + ': ' + (error && error.message ? error.message : String(error)), 'error');
+                showResult(browser.i18n.getMessage('recognitionFailed') + ': ' + (error && error.message ? error.message : String(error)), 'error');
             }
         }, 100);
     }

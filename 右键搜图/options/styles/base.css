@@ -1,0 +1,47 @@
+/* 全局基础样式 */
+
+/* 颜色变量 */
+:root {
+  --primary-color: #6a5acd;
+  --primary-hover: #5a4cad;
+  --success-color: #20c997;
+  --success-hover: #1baa80;
+  --danger-color : #e63946;
+  --danger-hover : #d62839;
+  --gray-color   : #6c757d;
+
+  --bg-color     : #f4f7f9;    /* 白色带点蓝 */
+  --text-color   : #343a40;
+  --border-color : #e9ecef;    /* 淡灰蓝色 */
+  --surface-color: #ffffff;
+  --success-bg   : rgba(32, 201, 151, 0.1);
+  --error-bg     : rgba(230, 57, 70, 0.1);
+}
+
+/* 全局样式重置 */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* 页面样式重置 */
+body {
+  margin: 0;
+  padding: 2rem;
+  min-height: 100vh;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* 容器样式和布局 */
+.container {
+  max-width: 750px;
+  margin: 0 auto;
+  border-radius: 8px;
+  background-color: var(--surface-color);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  gap: 1rem;
+}
