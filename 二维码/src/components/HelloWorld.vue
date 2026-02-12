@@ -37,6 +37,7 @@ const count = ref(0);
 .hello {
   border: 1px solid green;
   background-color: #f0f9ff;
+  padding: 10px;
 }
 body {
   border: 2px dashed red;

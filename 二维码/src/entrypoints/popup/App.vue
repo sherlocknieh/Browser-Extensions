@@ -3,18 +3,17 @@ import qrcode from 'qrcode-generator';
 
 // 等待 Popup 页面加载完成后开始工作
 document.addEventListener('DOMContentLoaded', async () => {
-  // 检查本地储存是否存在 qrCodeText 数据
-  const result = await chrome.storage.local.get(['qrCodeText']);
+  // 检查本地储存是否存在二维码源文本
+  const result = await browser.storage.local.get(['qrCodeText']);
+  // 有则生成其二维码
   if (result.qrCodeText) {
-    // 有则生成其二维码
-    generateQRCode(result.qrCodeText);
-    // 使用后清除存储的数据
-    await chrome.storage.local.remove('qrCodeText');
+    generateQRCode(result.qrCodeText as string);
+    await browser.storage.local.remove('qrCodeText'); // 使用后清除该数据
   }
+  // 否则生成当前页面URL的二维码
   else {
-    // 否则生成当前页面URL的二维码
-    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-    generateQRCode(tabs[0].url);
+    const tabs = await browser.tabs.query({ active: true, currentWindow: true });
+    generateQRCode(tabs[0].url as string);
   }
 });
 
@@ -45,6 +44,9 @@ function generateQRCode(text: string) {
 
     // 获取 2D 绘图上下文
     const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      throw new Error('无法获取Canvas 2D上下文');
+    };
 
     // 绘制白色背景
     ctx.fillStyle = '#ffffff';
@@ -87,11 +89,14 @@ function generateQRCode(text: string) {
 
 <style scoped>
 #qrcode-container {
+  /* 固定长宽 */
   width: 220px;
   height: 220px;
+  /* 内容居中 */
   display: flex;
-  flex-direction: column;
   justify-content: center;
   align-items: center;
+  /* 垂直排列 */
+  flex-direction: column; 
 }
 </style>

@@ -4,7 +4,12 @@ import { defineConfig } from 'wxt';
 export default defineConfig({
   modules: ['@wxt-dev/module-vue'], // 使用 Vue 模块
   srcDir: 'src',                    // 自定义源码目录
-  //webExt: { disabled: true },     // 调试时不自动打开浏览器
+  webExt: {
+    startUrls: ['https://immersivetranslate.com/zh-Hans/mobile'], // 调试时自动打开的页面
+    chromiumArgs: ['--user-data-dir=./.wxt/chrome-profile'],  // 记忆 Chromium 调试时的浏览器配置
+    firefoxArgs: ['-profile', './.wxt/firefox-profile'],      // 记忆 Firefox 调试时的浏览器配置
+    // disabled: true,              // 调试时不自动打开浏览器
+  },
   manifest: {
     name: '__MSG_appName__',
     description: '__MSG_appDescription__',
@@ -14,8 +19,7 @@ export default defineConfig({
     permissions: [
       'contextMenus',  // 允许使用右键菜单
       'storage',       // 允许使用本地存储，选中文本生成二维码时需要此权限
-      'activeTab',     // 允许访问当前标签页的信息，跨域访问图片需要此权限
-      'scripting'      // 允许使用脚本注入权限
+      'activeTab',     // 允许访问当前标签页的信息，访问网页图片, URL时需要此权限
     ],
     host_permissions: ['file:///*'], // 允许访问本地文件(用于识别浏览器打开的本地图片)
     icons: {

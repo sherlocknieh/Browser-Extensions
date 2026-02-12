@@ -45,8 +45,11 @@ export default defineBackground(() => {
 
     // 监听右键菜单点击事件
     browser.contextMenus.onClicked.addListener((info, tab) => {
-        const tabId = tab?.id;
-        if (tabId == null) return; // tabId 不存在则直接返回
+        const tabId = tab?.id;      // 获取当前标签页 ID
+        if (tabId == null) {
+            console.warn('tabId is null');  // tabId 不存在则警告并返回
+            return;
+        };
 
         if (info.menuItemId === "generateQR_page") {
             // 为当前页面生成二维码
@@ -79,8 +82,8 @@ export default defineBackground(() => {
             });
         }
     });
-
-    // 监听来自 content script 的消息
+ 
+    // 监听来自内容脚本的消息
     browser.runtime.onMessage.addListener((request, _sender, sendResponse) => {
         // 跨域获取图片数据
         if (request.action === "fetchImage") {
@@ -93,5 +96,7 @@ export default defineBackground(() => {
                 })
                 .catch(error => sendResponse({ success: false, error: error.message })); // 出错时发送错误信息
         }
+        return true; // 保持通道开启
+        // 防止 Error: The message port closed before a response was received.
     });
 });
