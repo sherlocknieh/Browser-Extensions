@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "右键增强",
-  "version": "1.0.0",
+  "name": "右键搜图",
+  "version": "1.2.0",
   "author": "sherlocknieh",
-  "description": "补充官方右键缺失的一些功能",
+  "description": "在图片上右键使用自定义搜图引擎搜索图片",
   "homepage_url": "https://github.com/sherlocknieh/Browser-Extensions",
 
   "permissions": ["contextMenus", "storage", "activeTab", "downloads"],
@@ -14,21 +14,9 @@
     "128": "images/icon.png"
   },
 
-  "options_page": "options/options.html",
+  "options_page": "options/index.html",
 
   "background": {
     "service_worker": "background.js"
-  },
-
-  "content_scripts": [
-    {
-      "matches": ["<all_urls>"],
-      "css": ["libs/toastify.css"],
-      "js": [
-        "libs/toastify.js",
-        "libs/Sortable.min.js",
-        "content.js"]
-    }
-  ]
-
+  }
 }

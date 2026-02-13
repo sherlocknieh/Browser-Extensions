@@ -4,7 +4,8 @@
 |name     | description         | link |
 |---      |---                  |---   |
 |二维码   | [README](#二维码)   |[Microsoft Edge](https://microsoftedge.microsoft.com/addons/detail/clkjmabfjboobjkemgknlgpjjlhdghbp)|
-|右键增强 | [README](#右键增强) |[Microsoft Edge](https://microsoftedge.microsoft.com/addons/detail/ingokbdobdmjedneflejcdidkkafciic)|
+|右键搜图 | [README](#右键搜图) |[Microsoft Edge](https://microsoftedge.microsoft.com/addons/detail/ingokbdobdmjedneflejcdidkkafciic)|
+|复制链接文字 | [README](#复制链接文字) ||
 
 -------------------------------------------
 
@@ -39,12 +40,11 @@
 
 -------------------------------------------
 
-## 右键增强
+## 右键搜图
 
 ### 功能
 
 - 右键
-  - [x] 右键复制链接文字
   - [x] 右键搜索图片
 - 设置
   - [x] 自定义添加搜索引擎
@@ -57,3 +57,17 @@
 ### 用到的第三方库
   - 使用 toastify 库做通知弹窗
   - 使用 sortablejs 库做拖拽排序
+
+
+
+-------------------------------------------
+## 复制链接文字
+
+### 功能
+
+- 右键
+  - [x] 右键选中链接文字, 并复制文字
+
+
+### 用到的第三方库
+  - 使用 toastify 库做通知弹窗
