@@ -17,12 +17,18 @@ function DefaultEngines() {
 // 扩展安装时初始化 (扩展安装/更新/重新启用时都会触发)
 chrome.runtime.onInstalled.addListener((details) => {
     // 把默认配置备份到本地存储的 DefaultEngines 键
-    chrome.storage.local.set({DefaultEngines: DefaultEngines()});    // 用户想要重置配置时才会用到
+    chrome.storage.local.set({ DefaultEngines: DefaultEngines() });    // 用户想要重置配置时才会用到
     // 把默认配置写入本地存储的 SearchEngines 键 (仅在安装时触发)
     if (details.reason === 'install') {
-        chrome.storage.local.set({SearchEngines: DefaultEngines()}); // 实际使用的用户配置
+        chrome.storage.local.set({ SearchEngines: DefaultEngines() }); // 实际使用的用户配置
     }
     // 创建右键菜单
+    createContextMenus();
+});
+
+
+// 创建右键菜单
+function createContextMenus() {
     chrome.contextMenus.removeAll(() => {
         // 图片搜索主菜单
         chrome.contextMenus.create({
@@ -60,7 +66,7 @@ chrome.runtime.onInstalled.addListener((details) => {
             });
         });
     });
-});
+}
 
 // 菜单点击事件处理
 chrome.contextMenus.onClicked.addListener((info, tab) => {
@@ -90,7 +96,7 @@ function handleSingleEngineSearch(menuItemId, imageUrl) {
         const engines = result.SearchEngines;
         // 找到对应的引擎
         const engine = engines.find(e => e.name === menuItemId);
-        
+
         if (engine) {
             // 构造搜索URL
             const searchUrl = engine.url.replace('%s', encodeURIComponent(imageUrl));
@@ -107,7 +113,7 @@ function handleAllEnginesSearch(imageUrl) {
     chrome.storage.local.get(['SearchEngines'], (result) => {
         // 获取所有搜图引擎
         const engines = result.SearchEngines;
-        
+
         // 选出启用的引擎
         const urls = [];
         engines.forEach(engine => {
@@ -118,7 +124,7 @@ function handleAllEnginesSearch(imageUrl) {
                 });
             }
         });
-        
+
         // 检查是否有引擎可用
         if (urls.length === 0) {
             console.warn('没有可用的搜图引擎');
