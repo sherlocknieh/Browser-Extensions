@@ -1,6 +1,6 @@
 {
   "appName": {
-    "message": "QR Code",
+    "message": "QRCode",
     "description": "Application name"
   },
   "appDescription": {
@@ -140,7 +140,7 @@
     "description": "Text shown after successful copy"
   },
   "recognitionSuccessTitle": {
-    "message": "Scanned successfully: ",
+    "message": "Scan success: ",
     "description": "Success message prefix"
   },
   "recognitionFailedMsg": {

@@ -1,6 +1,6 @@
 // WXT 规定的后台脚本入口
 export default defineBackground(() => {
-    // 初始化右键菜单
+    // 创建右键菜单
     browser.runtime.onInstalled.addListener(() => {
         // 清理旧菜单
         browser.contextMenus.removeAll(() => {
@@ -32,18 +32,18 @@ export default defineBackground(() => {
             browser.contextMenus.create({
                 id: "screenshotQR",
                 title: browser.i18n.getMessage("screenShot"),
-                contexts: ["action", "image"]
+                contexts: ["action", "browser_action", "image"]
             });
             // 添加菜单: 粘贴图片识别二维码
             browser.contextMenus.create({
                 id: "pasteImageQR",
                 title: browser.i18n.getMessage("pasteImage"),
-                contexts: ["action"] // 在工具栏图标右键菜单中显示
+                contexts: ["action", "browser_action"] // 在工具栏图标右键菜单中显示
             });
         });
     });
 
-    // 监听右键菜单点击事件
+    // 右键菜单点击事件处理
     browser.contextMenus.onClicked.addListener((info, tab) => {
         const tabId = tab?.id;      // 获取当前标签页 ID
         if (tabId == null) {
@@ -82,7 +82,7 @@ export default defineBackground(() => {
             });
         }
     });
- 
+
     // 监听来自内容脚本的消息
     browser.runtime.onMessage.addListener((request, _sender, sendResponse) => {
         // 跨域获取图片数据
@@ -98,5 +98,13 @@ export default defineBackground(() => {
         }
         return true; // 保持通道开启
         // 防止 Error: The message port closed before a response was received.
+    });
+
+    // 火狐浏览器: 把工具栏图标显示在地址栏
+    browser.tabs.onUpdated.addListener((tabId, changeInfo) => {
+        // 只有当标签页 URL 更新时才显示图标, 避免在新标签页等不相关页面显示图标
+        if (changeInfo.url) {
+            browser.pageAction.show(tabId);
+        }
     });
 });

@@ -25,3 +25,7 @@ WXT 项目必须文件
     - entrypoints/ : 入口文件目录
         - background.js : 后台脚本入口文件
         - content.js : 内容脚本入口文件
+
+## TODO
+
+- [] 支持 Firefox

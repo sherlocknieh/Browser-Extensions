@@ -32,8 +32,8 @@
     "description": "获取图片时的加载提示"
   },
   "decodingQR": {
-    "message": "正在解码二维码...",
-    "description": "解码二维码时的加载提示"
+    "message": "正在解析二维码...",
+    "description": "解析二维码时的加载提示"
   },
   "recognitionSuccess": {
     "message": "识别成功",
@@ -72,8 +72,8 @@
     "description": "图片元素加载失败的错误信息"
   },
   "crossOriginNotice": {
-    "message": "跨域图片，数据获取可能略慢",
-    "description": "跨域获取时的提示"
+    "message": "跨域图片，数据获取可能稍慢",
+    "description": "跨域获取图片时的提示"
   },
   "proxyFetchFailed": {
     "message": "代理获取失败",

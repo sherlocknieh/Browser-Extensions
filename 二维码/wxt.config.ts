@@ -28,5 +28,13 @@ export default defineConfig({
       48: 'icon.png',
       128: 'icon.png',
     },
+    page_action: {        // Firefox MV2 兼容，为了实现把图标显示在地址栏
+      default_icon: {
+        19: '/icon.png',
+        38: '/icon.png',
+      },
+      default_title: 'QRCode',
+      default_popup: '/popup/index.html',
+    },
   },
 });
