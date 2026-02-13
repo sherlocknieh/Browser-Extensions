@@ -84,7 +84,7 @@ function generateQRCode(text: string) {
 </script>
 
 <template>
-  <div id="qrcode-container"></div>
+  <div id="qrcode-container" class="bg-slate-50 border border-slate-200 rounded-lg shadow-sm"></div>
 </template>
 
 <style scoped>

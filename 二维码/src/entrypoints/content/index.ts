@@ -1,4 +1,5 @@
 import { createApp } from 'vue';
+import '@/assets/tailwind.css';
 import App from './App.vue';
 
 // WXT 规定的内容脚本入口
