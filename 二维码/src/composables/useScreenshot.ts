@@ -1,4 +1,4 @@
-import screenShotPlugin from 'js-web-screen-shot';
+import ScreenShot from 'js-web-screen-shot';
 
 type ScreenshotError = {
     type: 'warning' | 'error';
@@ -9,7 +9,7 @@ export function useScreenshot() {
     const startScreenshot = () => {
         return new Promise<string>((resolve, reject) => {
             // eslint-disable-next-line no-new
-            new screenShotPlugin({
+            new ScreenShot({
                 enableWebRtc: true,
                 completeCallback: ({ base64 }) => resolve(base64),
                 closeCallback: () => {

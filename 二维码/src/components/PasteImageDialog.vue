@@ -270,14 +270,14 @@ onBeforeUnmount(() => {
                 @drop="handleDrop"
                 @click="openFilePicker"
             >
-                <svg class="qr-upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg v-if="!hasImage" class="qr-upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                     <circle cx="8.5" cy="8.5" r="1.5"></circle>
                     <polyline points="21 15 16 10 5 21"></polyline>
                 </svg>
 
-                <div class="qr-upload-text">{{ t('dropZoneText') }}</div>
-                <div class="qr-upload-hint">{{ t('dropZoneHint') }}</div>
+                <div v-if="!hasImage" class="qr-upload-text">{{ t('dropZoneText') }}</div>
+                <div v-if="!hasImage" class="qr-upload-hint">{{ t('dropZoneHint') }}</div>
 
                 <img ref="imagePreviewRef" class="qr-image-preview" :class="{ show: hasImage }" :src="currentImageData || ''" />
                 <input ref="fileInputRef" class="qr-file-input" type="file" accept="image/*" @change="handleFileChange" />

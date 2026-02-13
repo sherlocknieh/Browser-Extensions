@@ -1,8 +1,7 @@
 <script lang="ts" setup>
 import { onBeforeUnmount, onMounted, ref } from 'vue';
-import PasteImageDialog from '@/components/PasteImageDialog.vue';
-import { useNotify } from '@/composables/useNotify';
-import { useScreenshot } from '@/composables/useScreenshot';
+
+// 非UI组件
 import {
     decodeQrFromImageData,
     getImageDataFromDataUrl,
@@ -10,15 +9,26 @@ import {
     loadImageDataFromUrl,
 } from '@/services/qrScanner';
 
+// UI组件
+import PasteImageDialog from '@/components/PasteImageDialog.vue';
+import { useNotify } from '@/composables/useSweetAlert2';
+import { useScreenshot } from '@/composables/useScreenshot';
+
+
+
 const { fire, close, showLoading } = useNotify();
 const { startScreenshot } = useScreenshot();
 
+
+// 图片粘贴对话框的开关变量
 const isPasteDialogOpen = ref(false);
 
+// 国际化文本获取函数，提供默认值以防止缺失翻译导致的显示问题
 const t = (key: Parameters<typeof browser.i18n.getMessage>[0]) =>
     browser.i18n.getMessage(key) || String(key);
 
-const onMessage = (message: { action?: string; imageUrl?: string }) => {
+// 内容脚本的主流程函数，根据不同的消息类型调用相应的处理逻辑
+const mainProcess = (message: { action?: string; imageUrl?: string }) => {
     if (message.action === 'decodeQR' && message.imageUrl) {
         handleImageUrl(message.imageUrl);
     }
@@ -30,14 +40,18 @@ const onMessage = (message: { action?: string; imageUrl?: string }) => {
     }
 };
 
+// 当组件挂载时，注册消息监听器，等待来自背景脚本的指令
 onMounted(() => {
-    browser.runtime.onMessage.addListener(onMessage);
+    browser.runtime.onMessage.addListener(mainProcess);
 });
 
+// 当组件卸载时，移除消息监听器，避免内存泄漏
 onBeforeUnmount(() => {
-    browser.runtime.onMessage.removeListener(onMessage);
+    browser.runtime.onMessage.removeListener(mainProcess);
 });
 
+
+// 网页图片处理流程
 async function handleImageUrl(imageUrl: string) {
     const origin = window.location.origin;
     const needsProxy = !isSameOrigin(imageUrl, origin);
@@ -72,6 +86,7 @@ async function handleImageUrl(imageUrl: string) {
     }
 }
 
+// 截图识别流程
 async function handleScreenshot() {
     try {
         const base64 = await startScreenshot();
@@ -108,7 +123,9 @@ async function handleScreenshot() {
     }
 }
 
+// 解码过程+通知流程
 async function decodeAndNotify(imageData: ImageData) {
+    // 显示正在识别的通知
     fire({
         toast: true,
         icon: 'info',
@@ -117,14 +134,16 @@ async function decodeAndNotify(imageData: ImageData) {
         showCloseButton: true,
     });
 
+    // 等待短暂时间以确保通知显示后再进行计算密集型的识别操作，避免界面卡顿
     await new Promise((resolve) => setTimeout(resolve, 50));
 
+    // 调用二维码识别函数，获取识别结果
     const result = decodeQrFromImageData(imageData);
-    close();
+    close();// 关闭正在识别的通知
 
     if (result) {
         const response = await fire({
-            toast: true,
+            toast: false,
             icon: 'success',
             title: t('recognitionSuccess'),
             text: result,
@@ -146,7 +165,7 @@ async function decodeAndNotify(imageData: ImageData) {
     }
 
     fire({
-        toast: true,
+        toast: false,
         icon: 'warning',
         title: t('recognitionFailed'),
         text: t('noValidQRCode'),
@@ -155,6 +174,7 @@ async function decodeAndNotify(imageData: ImageData) {
     });
 }
 
+// 跨域图片获取流程，通过向背景脚本发送消息请求代理获取图片数据
 function fetchImageViaProxy(url: string): Promise<string> {
     return new Promise((resolve, reject) => {
         browser.runtime.sendMessage({ action: 'fetchImage', url }, (response) => {
@@ -179,23 +199,14 @@ function fetchImageViaProxy(url: string): Promise<string> {
 </template>
 
 <style>
-.swal2-container {
-    z-index: 2147483647 !important;
-}
 
-#screenShotContainer,
-#toolPanel,
-#optionIcoController,
-#cutBoxSizePanel,
-#optionPanel {
-    z-index: 2147483647 !important;
-    position: fixed !important;
-}
 
 #screenShotContainer {
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
+    z-index: 9999 !important;
+    position: fixed !important;
 }
 </style>

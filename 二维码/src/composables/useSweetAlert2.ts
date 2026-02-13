@@ -6,7 +6,7 @@ export function useNotify() {
 
     const withTarget = (options: SweetAlertOptions): SweetAlertOptions => ({
         ...options,
-        target: container ?? undefined,
+        target: container ?? document.body,
     });
 
     const fire = (options: SweetAlertOptions): Promise<SweetAlertResult> => Swal.fire(withTarget(options));
