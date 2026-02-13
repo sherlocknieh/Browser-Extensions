@@ -5,7 +5,7 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineConfig({
   modules: ['@wxt-dev/module-vue'], // 使用 Vue 模块
   vite: () => ({
-    plugins: [tailwindcss()],
+    plugins: [tailwindcss()],       // 使用 Tailwind CSS
   }),
   srcDir: 'src',                    // 自定义源码目录
   webExt: {
@@ -21,16 +21,16 @@ export default defineConfig({
     author: 'sherlocknieh@gmail.com' as unknown as { email: string },
     homepage_url: 'https://github.com/sherlocknieh/Browser-Extensions',
     permissions: [
-      'contextMenus',  // 允许使用右键菜单
-      'storage',       // 允许使用本地存储；选中文本生成二维码时需要此权限
-      'activeTab',     // 允许访问当前标签页的信息；访问网页图片, 页面URL时需要此权限
+      'contextMenus',  // 右键菜单权限
+      'storage',       // 本地存储权限；选中文本生成二维码时需要此权限
+      'activeTab',     // 当前标签页信息权限；获取页面URL, 读取网页图片等
     ],
     host_permissions: ['file:///*'], // 允许访问本地文件(用于识别浏览器打开的本地图片)
     icons: {
-      16: 'icon.png',
-      32: 'icon.png',
-      48: 'icon.png',
-      128: 'icon.png',
+      16: 'icon.png',   // 工具栏,右键菜单,标签favicon
+      32: 'icon.png',   // Firefox 工具栏和 about:addons 管理页面
+      48: 'icon.png',   // chrome://extensions 管理页面
+      128: 'icon.png',  // 扩展商店
     },
     page_action: {        // Firefox MV2 兼容设置，为了实现把图标显示在地址栏
       default_icon: {

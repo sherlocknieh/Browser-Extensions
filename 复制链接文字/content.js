@@ -1,5 +1,6 @@
-// 监听 background.js 的消息
+// 监听 background 消息
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    // 处理复制链接文字请求
     if (message.action === "copyLinkText") {
         copyLinkText();
     }
@@ -8,6 +9,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 // 监听右键点击事件，记录被点击的元素
 let lastRightClicked = null;
+// 记录最后一次右键点击的元素
 document.addEventListener('contextmenu', (event) => {
     lastRightClicked = event.target;
 });
