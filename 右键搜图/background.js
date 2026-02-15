@@ -21,14 +21,22 @@ chrome.runtime.onInstalled.addListener((details) => {
     // 把默认配置写入本地存储的 SearchEngines 键 (仅在安装时触发)
     if (details.reason === 'install') {
         chrome.storage.local.set({ SearchEngines: DefaultEngines() }); // 实际使用的用户配置
-    }
-    // 创建右键菜单
-    createContextMenus();
+    } // 储存变化时会自动触发右键菜单创建程序
 });
 
 
-// 创建右键菜单
+// 监听存储变化，更新右键菜单
+chrome.storage.onChanged.addListener((changes, namespace) => {
+    // 确保是 local 存储区域且 SearchEngines 发生了变化
+    if (namespace === 'local' && changes.SearchEngines) {
+        // 触发右键菜单创建程序
+        createContextMenus();
+    }
+});
+
+// 右键菜单创建程序
 function createContextMenus() {
+    // 先删除所有已存在的菜单项
     chrome.contextMenus.removeAll(() => {
         // 图片搜索主菜单
         chrome.contextMenus.create({
@@ -78,14 +86,6 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     // 单引擎搜图
     else {
         handleSingleEngineSearch(info.menuItemId, info.srcUrl);
-    }
-});
-
-// 监听存储变化，更新右键菜单
-chrome.storage.onChanged.addListener((changes, namespace) => {
-    // 确保是 local 存储区域且 SearchEngines 发生了变化
-    if (namespace === 'local' && changes.SearchEngines) {
-        createContextMenus();
     }
 });
 
