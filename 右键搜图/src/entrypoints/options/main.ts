@@ -1,6 +1,17 @@
 // =========================
 //      设置页面初始化
 // =========================
+import './styles.css';
+import Sortable from 'sortablejs';
+import "toastify-js/src/toastify.css";
+import Toastify from 'toastify-js';
+
+type SearchEngine = {
+    enabled: boolean;
+    name: string;
+    url: string;
+};
+
 
 document.addEventListener('DOMContentLoaded', function() {
     loadConfigButtons(); // 加载配置管理按钮
@@ -51,9 +62,10 @@ function loadConfigButtons() {
 function loadEngines() {
 
     const enginesList = document.getElementById('enginesList');
+    if (!enginesList) return;
     enginesList.textContent = '';
 
-    chrome.storage.local.get('SearchEngines', (result) => {
+    browser.storage.local.get('SearchEngines', (result: { SearchEngines?: SearchEngine[] }) => {
 
         const engines = result.SearchEngines || [];
 
@@ -66,7 +78,7 @@ function loadEngines() {
         }
 
         // 渲染引擎项
-        engines.forEach((engine, index) => {
+        engines.forEach((engine: SearchEngine, index: number) => {
             const engineItem = createEngineItem(engine, index);
             enginesList.appendChild(engineItem);
         });
@@ -80,12 +92,12 @@ function loadEngines() {
 }
 
 // 创建单个引擎项
-function createEngineItem(engine, index) {
+function createEngineItem(engine: { enabled: boolean; name: string; url: string; }, index: number) {
     
     const engineItem = document.createElement('div');
     engineItem.className = 'engine-item';
 
-    engineItem.dataset.engineIndex = index; // 创建了 data-engine-index 属性，并赋值
+    engineItem.dataset.engineIndex = String(index);
 
     // 启用/禁用复选框
     const checkbox = document.createElement('input');
@@ -93,12 +105,12 @@ function createEngineItem(engine, index) {
     checkbox.className = 'engine-checkbox';
     checkbox.checked = engine.enabled;
     checkbox.addEventListener('change', function() {
-        chrome.storage.local.get('SearchEngines', (result) => {
+        browser.storage.local.get('SearchEngines', (result: { SearchEngines?: SearchEngine[] }) => {
             const engines = result.SearchEngines || [];
             const idx = index;
             if (idx >= 0 && idx < engines.length) {
                 engines[idx].enabled = checkbox.checked;
-                chrome.storage.local.set({ SearchEngines: engines }, () => {
+                browser.storage.local.set({ SearchEngines: engines }, () => {
                     showStatus('已保存启用状态', 'success');
                     loadEngines();
                 });
@@ -119,7 +131,7 @@ function createEngineItem(engine, index) {
     urlInput.value = engine.url;
 
     // 删除按钮
-    const deleteBtn = document.createElement('button');
+    const deleteBtn = document.createElement('button') as HTMLButtonElement & { _confirmInterval?: ReturnType<typeof setInterval> | null };
     deleteBtn.className = 'delete-btn';
     deleteBtn.innerHTML = '🗑️';
     deleteBtn.title = '删除引擎';
@@ -203,7 +215,7 @@ function createNewEngineForm() {
 
     engineItem.append(addIcon, nameInput, urlInput, addBtn);
     // 支持回车提交：在新增引擎输入框按 Enter 时触发添加
-    const newEngineKeyHandler = (e) => {
+    const newEngineKeyHandler = (e: KeyboardEvent) => {
         if (e.key === 'Enter') {
             e.preventDefault();
             addNewEngine();
@@ -222,8 +234,9 @@ function createNewEngineForm() {
 
 // 添加引擎
 function addNewEngine() {
-    const nameInput = document.getElementById('new-engine-name');
-    const urlInput = document.getElementById('new-engine-url');
+    const nameInput = document.getElementById('new-engine-name') as HTMLInputElement | null;
+    const urlInput = document.getElementById('new-engine-url') as HTMLInputElement | null;
+    if (!nameInput || !urlInput) return;
     const name = nameInput.value.trim();
     const url = urlInput.value.trim();
     if (!name || !url) {
@@ -234,15 +247,15 @@ function addNewEngine() {
         showStatus('URL必须包含图片占位符 %s', 'error');
         return;
     }
-    chrome.storage.local.get('SearchEngines', (result) => {
+    browser.storage.local.get('SearchEngines', (result: { SearchEngines?: SearchEngine[] }) => {
         const engines = result.SearchEngines || [];
-        if (engines.some(e => e.name === name)) {
+        if (engines.some((e: SearchEngine) => e.name === name)) {
             showStatus('引擎名称已存在', 'error');
             return;
         }
-        const newEngine = { name, url, enabled: true };
+        const newEngine: SearchEngine = { name, url, enabled: true };
         engines.push(newEngine);
-        chrome.storage.local.set({ SearchEngines: engines }, () => {
+        browser.storage.local.set({ SearchEngines: engines }, () => {
             showStatus(`已添加 "${name}" 搜索引擎`, 'success');
             nameInput.value = '';
             urlInput.value = '';
@@ -252,13 +265,13 @@ function addNewEngine() {
 }
 
 // 删除引擎
-function deleteEngine(engineIndex) {
-    chrome.storage.local.get('SearchEngines', (result) => {
+function deleteEngine(engineIndex: number) {
+    browser.storage.local.get('SearchEngines', (result: { SearchEngines?: SearchEngine[] }) => {
         const engines = result.SearchEngines || [];
         if (engineIndex >= 0 && engineIndex < engines.length) {
             const engineName = engines[engineIndex].name;
             engines.splice(engineIndex, 1);
-            chrome.storage.local.set({ SearchEngines: engines }, () => {
+            browser.storage.local.set({ SearchEngines: engines }, () => {
                 showStatus(`已删除 "${engineName}" 搜索引擎`, 'success');
                 loadEngines();
             });
@@ -267,7 +280,7 @@ function deleteEngine(engineIndex) {
 }
 
 // 修改引擎
-function attachInlineSaveHandlers(nameInput, urlInput, index) {
+function attachInlineSaveHandlers(nameInput: HTMLInputElement, urlInput: HTMLInputElement, index: number) {
     const setPrev = () => {
         nameInput.dataset.prev = nameInput.value.trim();
         urlInput.dataset.prev = urlInput.value.trim();
@@ -293,8 +306,8 @@ function attachInlineSaveHandlers(nameInput, urlInput, index) {
             showStatus('URL必须包含图片占位符 %s', 'error');
             return;
         }
-        chrome.storage.local.get('SearchEngines', (result) => {
-            const engines = (result.SearchEngines || []).slice();
+        browser.storage.local.get('SearchEngines', (result: { SearchEngines?: SearchEngine[] }) => {
+            const engines: SearchEngine[] = (result.SearchEngines || []).slice();
             if (index < 0 || index >= engines.length) return;
             // 如果名称重复且不是同一项，提示错误
             const duplicate = engines.some((e, i) => i !== index && e.name === newName);
@@ -303,7 +316,7 @@ function attachInlineSaveHandlers(nameInput, urlInput, index) {
                 return;
             }
             engines[index] = { ...engines[index], name: newName, url: newUrl };
-            chrome.storage.local.set({ SearchEngines: engines }, () => {
+            browser.storage.local.set({ SearchEngines: engines }, () => {
                 showStatus('配置已自动保存', 'success');
                 // 更新 prev 值
                 nameInput.dataset.prev = newName;
@@ -315,12 +328,12 @@ function attachInlineSaveHandlers(nameInput, urlInput, index) {
     nameInput.addEventListener('blur', trySaveRow);
     urlInput.addEventListener('blur', trySaveRow);
     // 支持回车保存：在行内输入框按 Enter 时触发保存并移除焦点
-    const inlineKeyHandler = (e) => {
+    const inlineKeyHandler = (e: KeyboardEvent) => {
         if (e.key === 'Enter') {
             e.preventDefault();
             trySaveRow();
             // 让输入框失去焦点以触发视觉上的“提交”行为
-            e.target.blur();
+            (e.target as HTMLInputElement | null)?.blur();
         }
     };
     nameInput.addEventListener('keydown', inlineKeyHandler);
@@ -329,7 +342,7 @@ function attachInlineSaveHandlers(nameInput, urlInput, index) {
 
 // 拖拽排序
 function initializeSortable() {
-    const listEl = document.getElementById('enginesList');
+    const listEl = document.getElementById('enginesList') as (HTMLElement & { _sortableInstance?: Sortable }) | null;
     if (!listEl) return;
 
     // 如果已存在实例则不重复创建（优先用 Sortable.get，回退到元素自带属性）
@@ -343,16 +356,16 @@ function initializeSortable() {
         draggable: '.engine-item:not(.non-draggable)',
         filter: 'input, textarea, .new-engine-input, #new-engine-name, #new-engine-url',
         preventOnFilter: false,
-        onEnd: function(evt) {
+        onEnd: function(evt: Sortable.SortableEvent) {
             const oldIndex = evt.oldIndex;
             const newIndex = evt.newIndex;
-            if (oldIndex === newIndex) return;
-            chrome.storage.local.get('SearchEngines', (result) => {
+            if (oldIndex == null || newIndex == null || oldIndex === newIndex) return;
+            browser.storage.local.get('SearchEngines', (result: { SearchEngines?: SearchEngine[] }) => {
                 const engines = result.SearchEngines || [];
                 const adjustedOld = oldIndex;
                 const adjustedNew = newIndex;
                 const newArr = reorderArray(engines, adjustedOld, adjustedNew);
-                chrome.storage.local.set({ SearchEngines: newArr }, () => {
+                browser.storage.local.set({ SearchEngines: newArr }, () => {
                     showStatus('顺序已保存', 'success');
                     loadEngines();
                 });
@@ -368,7 +381,7 @@ function initializeSortable() {
 }
 
 // 数组重排工具
-function reorderArray(arr, fromIndex, toIndex) {
+function reorderArray<T>(arr: T[], fromIndex: number, toIndex: number) {
     const len = arr.length;
     if (fromIndex < 0 || fromIndex >= len || toIndex < 0 || toIndex >= len || fromIndex === toIndex) {
         return arr.slice();
@@ -386,7 +399,7 @@ function reorderArray(arr, fromIndex, toIndex) {
 // =========================
 
 function exportConfig() {
-    chrome.storage.local.get('SearchEngines', (result) => {
+    browser.storage.local.get('SearchEngines', (result: { SearchEngines?: SearchEngine[] }) => {
         const config = {
             version: '1.0',
             exportTime: new Date().toISOString(),
@@ -394,7 +407,7 @@ function exportConfig() {
         };
         const configJson = JSON.stringify(config, null, 2);
         const blob = new Blob([configJson], { type: 'application/json' });
-        chrome.downloads.download({
+        browser.downloads.download({
             url: URL.createObjectURL(blob),
             filename: `右键增强配置.${new Date().toISOString().slice(0, 19).replace('T', '_').replace(/:/g, '-')}.json`,
             saveAs: true
@@ -402,33 +415,39 @@ function exportConfig() {
     });
 }
 
-function importConfig(event) {
-    const file = event.target.files[0];
+function importConfig(event: Event) {
+    const inputEl = event.target as HTMLInputElement | null;
+    const file = inputEl?.files?.[0];
     if (!file) {
         showStatus('未选择文件', 'error');
         return;
     }
     const reader = new FileReader();
-    reader.onload = function(e) {
+    reader.onload = function(e: ProgressEvent<FileReader>) {
         try {
-            const config = JSON.parse(e.target.result);
+            const raw = e.target?.result;
+            if (typeof raw !== 'string') {
+                throw new Error('读取配置文件失败');
+            }
+            const config = JSON.parse(raw) as { exportTime?: string; SearchEngines?: SearchEngine[] };
             if (!config || !Array.isArray(config.SearchEngines)) {
                 throw new Error('配置文件格式不正确或缺少引擎数据');
             }
             const engineCount = config.SearchEngines.length;
             if (!confirm(`确定要导入配置吗？\n\n将导入 ${engineCount} 个搜图引擎。\n导入时间：${config.exportTime ? new Date(config.exportTime).toLocaleString() : '未知'}\n\n注意：这将覆盖当前所有搜图引擎设置！`)) {
-                event.target.value = '';
+                if (inputEl) inputEl.value = '';
                 return;
             }
-            chrome.storage.local.set({ SearchEngines: config.SearchEngines }, () => {
+            browser.storage.local.set({ SearchEngines: config.SearchEngines }, () => {
                 showStatus(`配置导入成功！已导入 ${engineCount} 个引擎`, 'success');
                 loadEngines();
             });
         } catch (error) {
-            showStatus(`导入失败：${error.message}`, 'error');
+            const message = error instanceof Error ? error.message : String(error);
+            showStatus(`导入失败：${message}`, 'error');
             console.error('Config import error:', error);
         } finally {
-            event.target.value = '';
+            if (inputEl) inputEl.value = '';
         }
     };
     reader.readAsText(file);
@@ -436,9 +455,9 @@ function importConfig(event) {
 
 function resetConfig() {
     if (!confirm('确定要重置所有配置吗?')) {return;}
-    chrome.storage.local.get('DefaultEngines', (result) => {
+    browser.storage.local.get('DefaultEngines', (result: { DefaultEngines?: SearchEngine[] }) => {
         const defaultEngines = result.DefaultEngines || [];
-        chrome.storage.local.set({ SearchEngines: defaultEngines }, () => {
+        browser.storage.local.set({ SearchEngines: defaultEngines }, () => {
             loadEngines();
             showStatus('配置已重置为默认值', 'success');
         });
@@ -450,7 +469,7 @@ function resetConfig() {
 // =========================
 //         消息提示
 // =========================
-function showStatus(message, type) {
+function showStatus(message: string, type: 'success' | 'error') {
     
     // 使用 toastify 库显示消息
     if (typeof Toastify === 'function') {
@@ -469,7 +488,7 @@ function showStatus(message, type) {
     }
 
     // 如果没有 toastify 库，则使用页面内的状态栏显示（降级方案）
-    const statusDiv = document.getElementById('statusMessage');
+    const statusDiv = document.getElementById('statusMessage') as (HTMLElement & { _hideTimeout?: ReturnType<typeof setTimeout> }) | null;
     if (!statusDiv) return;
 
     statusDiv.textContent = message;
@@ -477,9 +496,8 @@ function showStatus(message, type) {
     statusDiv.style.display = 'inline-block';
 
     // 自动隐藏
-    clearTimeout(statusDiv._hideTimeout);
+    if (statusDiv._hideTimeout) clearTimeout(statusDiv._hideTimeout);
     statusDiv._hideTimeout = setTimeout(() => {
         statusDiv.style.display = 'none';
     }, 3000);
 }
-        

@@ -1,0 +1,32 @@
+{
+  "name": "image-search-context-menu",
+  "version": "1.2.3",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "wxt",
+    "dev:firefox": "wxt -b firefox",
+    "build": "wxt build",
+    "build:firefox": "wxt build -b firefox --mv3",
+    "zip": "wxt zip",
+    "zip:firefox": "wxt zip -b firefox --mv3",
+    "compile": "vue-tsc --noEmit",
+    "postinstall": "wxt prepare"
+  },
+  "dependencies": {
+    "sortablejs": "^1.15.7",
+    "toastify-js": "^1.12.0",
+    "vue": "^3.5.17",
+    "vuedraggable": "^2.24.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.18",
+    "@types/sortablejs": "^1.15.9",
+    "@types/toastify-js": "^1.12.4",
+    "@wxt-dev/module-vue": "^1.0.3",
+    "tailwindcss": "^4.1.18",
+    "typescript": "^5.9.3",
+    "vue-tsc": "^3.2.4",
+    "wxt": "^0.20.14"
+  }
+}
