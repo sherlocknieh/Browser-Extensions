@@ -26,6 +26,8 @@ WXT 项目必须文件
         - background.js : 后台脚本入口文件
         - content.js : 内容脚本入口文件
 
+## 目前功能
+- [x] 识别网页中的二维码
+- [x] 支持 Firefox
 ## TODO
 
-- [] 支持 Firefox

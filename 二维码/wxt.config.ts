@@ -1,23 +1,21 @@
+// wxt.config.ts
 import { defineConfig } from 'wxt';
-import tailwindcss from '@tailwindcss/vite';
+import { resolve } from 'node:path';
 
 // 确保 dev profile 目录存在（不存在会自动创建）
 import { mkdirSync } from 'node:fs';
-mkdirSync('.wxt/chrome-profile', { recursive: true });
-mkdirSync('.wxt/firefox-profile', { recursive: true });
+mkdirSync('.wxt/dev-profile/chrome', { recursive: true });
+mkdirSync('.wxt/dev-profile/firefox', { recursive: true });
 
 // See https://wxt.dev/api/config.html
 export default defineConfig({
   modules: ['@wxt-dev/module-vue'], // 使用 Vue 模块
-  vite: () => ({
-    plugins: [tailwindcss()],       // 使用 Tailwind CSS
-  }),
   srcDir: 'src',                    // 自定义源码目录
   webExt: {
     // disabled: true,              // 调试时不自动打开浏览器
-    // startUrls: ['https://immersivetranslate.com/zh-Hans/mobile'], // 调试时自动打开的页面
-    chromiumProfile: '.wxt/chrome-profile', // 调试时使用的 Chromium 配置文件路径
-    firefoxProfile: '.wxt/firefox-profile', // 调试时使用的 Firefox 配置文件路径
+    startUrls: ['https://inftab.com/'],         // 调试时自动打开的页面
+    chromiumProfile: resolve('.wxt/dev-profile/chrome'), // 调试时使用的 Chromium 配置文件路径
+    firefoxProfile: resolve('.wxt/dev-profile/firefox'), // 调试时使用的 Firefox 配置文件路径
     keepProfileChanges: true,               // 记忆浏览器配置变更
     // 以上三行配置防止每次调试都打开全新无配置的浏览器
   },

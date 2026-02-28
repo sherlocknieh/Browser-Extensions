@@ -199,8 +199,6 @@ function fetchImageViaProxy(url: string): Promise<string> {
 </template>
 
 <style>
-
-
 #screenShotContainer {
     top: 0;
     left: 0;
