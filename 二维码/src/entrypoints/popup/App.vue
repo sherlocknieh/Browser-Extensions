@@ -87,6 +87,16 @@ function generateQRCode(text: string) {
   <div id="qrcode-container" class="bg-slate-50 border border-slate-200 rounded-lg shadow-sm"></div>
 </template>
 
+<style>
+#app {
+  /* 使用 Flexbox 布局 */
+  display: flex;
+  min-height: 100vh;       /* 占满视口高度 */
+  justify-content: center; /* 水平居中 */
+  align-items: center;     /* 垂直居中 */
+}
+</style>
+
 <style scoped>
 #qrcode-container {
   /* 固定长宽 */

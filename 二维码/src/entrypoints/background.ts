@@ -1,15 +1,31 @@
 // WXT 规定的后台脚本入口
 export default defineBackground(() => {
+    // [Firefox MV2 兼容] 检测浏览器类型，确定使用哪个 context 值
+    const actionContext = browser.action ? "action" : "browser_action";
+
+    // 兼容打开 popup：优先 action，其次 browser_action，最后兜底新标签页
+    const openPopupCompat = async () => {
+        try {
+            if (browser.action?.openPopup) {
+                await browser.action.openPopup();
+                return;
+            }
+
+            if (browser.browserAction?.openPopup) {
+                await browser.browserAction.openPopup();
+                return;
+            }
+        } catch (error) {
+            console.warn("openPopup 不受支持，使用新标签页打开:", error);
+        }
+
+        await browser.tabs.create({ url: browser.runtime.getURL("/popup.html") });
+    };
+    
     // 创建右键菜单
     browser.runtime.onInstalled.addListener(() => {
         // 清理旧菜单
         browser.contextMenus.removeAll(() => {
-            // 添加菜单: 为当前页面生成二维码
-            browser.contextMenus.create({
-                id: "generateQR_page",
-                title: browser.i18n.getMessage("generateQR_page"),
-                contexts: ["page"]
-            });
             // 添加菜单: 链接生成二维码
             browser.contextMenus.create({
                 id: "generateQR_link",
@@ -32,13 +48,13 @@ export default defineBackground(() => {
             browser.contextMenus.create({
                 id: "screenshotQR",
                 title: browser.i18n.getMessage("screenShot"),
-                contexts: ["action", "browser_action", "image"]
+                contexts: [actionContext, "image"]
             });
             // 添加菜单: 粘贴图片识别二维码
             browser.contextMenus.create({
                 id: "pasteImageQR",
                 title: browser.i18n.getMessage("pasteImage"),
-                contexts: ["action", "browser_action"] // 在工具栏图标右键菜单中显示
+                contexts: [actionContext] // 在工具栏图标右键菜单中显示
             });
         });
     });
@@ -49,20 +65,15 @@ export default defineBackground(() => {
         if (tabId == null) {
             console.warn('tabId is null');  // tabId 不存在则警告并返回
             return;
-        };
-
-        if (info.menuItemId === "generateQR_page") {
-            // 为当前页面生成二维码
-            browser.action.openPopup();     // 直接打开popup
         } else if (info.menuItemId === "generateQR_link") {
             // 链接生成二维码
             browser.storage.local.set({ qrCodeText: info.linkUrl }, () => {
-                browser.action.openPopup(); // 把链接写入本地存储后打开 popup
+                void openPopupCompat(); // 把链接写入本地存储后打开 popup
             });
         } else if (info.menuItemId === "generateQR_selection") {
             // 选中文字生成二维码
             browser.storage.local.set({ qrCodeText: info.selectionText }, () => {
-                browser.action.openPopup(); // 把选中文字写入本地存储后打开 popup
+                void openPopupCompat(); // 把选中文字写入本地存储后打开 popup
             });
         } else if (info.menuItemId === "decodeQR") {
             // 页面图片二维码识别
@@ -103,7 +114,7 @@ export default defineBackground(() => {
     // 火狐浏览器: 把工具栏图标显示在地址栏
     browser.tabs.onUpdated.addListener((tabId, changeInfo) => {
         // 只有当标签页 URL 更新时才显示图标, 避免在新标签页等不相关页面显示图标
-        if (changeInfo.url) {
+        if (changeInfo.url && browser.pageAction) {
             browser.pageAction.show(tabId);
         }
     });
