@@ -6,6 +6,7 @@ export function useNotify() {
 
     const withTarget = (options: SweetAlertOptions): SweetAlertOptions => ({
         ...options,
+        toast: true,
         target: container ?? document.body,
     });
 
