@@ -3,23 +3,54 @@ export default defineBackground(() => {
     // [Firefox MV2 兼容] 检测浏览器类型，确定使用哪个 context 值
     const actionContext = browser.action ? "action" : "browser_action";
 
-    // 兼容打开 popup：优先 action，其次 browser_action，最后兜底新标签页
-    const openPopupCompat = async () => {
-        try {
-            if (browser.action?.openPopup) {
-                await browser.action.openPopup();
-                return;
-            }
+    // [Firefox MV2 兼容] browserAction 的 openPopup 未包含在类型定义中
+    type OpenPopupCapable = { openPopup?: () => Promise<void> };
 
-            if (browser.browserAction?.openPopup) {
-                await browser.browserAction.openPopup();
+    // 根据 manifest 选择对应的 action API, 避免调用不存在的命名空间
+    // 右键唤起时优先地址栏 page_action, 其次工具栏 action / browser_action
+    const resolveActionApi = (): OpenPopupCapable | undefined => {
+        const manifest = browser.runtime.getManifest() as Record<string, unknown>;
+        const pageAction = browser.pageAction as unknown as OpenPopupCapable | undefined;
+        const browserAction = browser.browserAction as unknown as OpenPopupCapable | undefined;
+        const candidates: (OpenPopupCapable | undefined)[] = [];
+        if (manifest.page_action) candidates.push(pageAction);
+        if (manifest.browser_action) candidates.push(browserAction);
+        if (manifest.action) candidates.push(browser.action);
+        candidates.push(pageAction, browser.action, browserAction);
+        return candidates.find((candidate) => typeof candidate?.openPopup === "function");
+    };
+
+    // 兼容打开 popup：优先 action API, 最后兜底新标签页
+    const openPopupCompat = async (hash = "") => {
+        const action = resolveActionApi();
+        if (action?.openPopup) {
+            try {
+                await action.openPopup();
                 return;
+            } catch (error) {
+                console.warn("openPopup 调用失败，使用新标签页打开:", error);
             }
-        } catch (error) {
-            console.warn("openPopup 不受支持，使用新标签页打开:", error);
         }
 
-        await browser.tabs.create({ url: browser.runtime.getURL("/popup.html") });
+        // 无法调用原生 popup 时, 退而求其次打开一个小弹窗(而非整页新标签)
+        await browser.windows.create({
+            url: browser.runtime.getURL(`/popup.html${hash}`),
+            type: "popup",
+            width: 268,
+            height: 320,
+        });
+    };
+
+    // 右键菜单选中文字/链接后, 把文本交给 popup 生成二维码
+    const requestQrFromText = (text?: string) => {
+        const value = text?.trim();
+        if (!value) return;
+
+        // 先写入文本, 再同步调用 openPopup
+        const storage = browser.storage.session ?? browser.storage.local;
+        void storage.set({ qrCodeText: value });
+        // Firefox 要求 openPopup 必须在用户手势处理函数中调用, 不能先 await
+        void openPopupCompat(`#text=${encodeURIComponent(value)}`);
     };
     
     // 创建右键菜单
@@ -67,14 +98,10 @@ export default defineBackground(() => {
             return;
         } else if (info.menuItemId === "generateQR_link") {
             // 链接生成二维码
-            browser.storage.local.set({ qrCodeText: info.linkUrl }, () => {
-                void openPopupCompat(); // 把链接写入本地存储后打开 popup
-            });
+            requestQrFromText(info.linkUrl);
         } else if (info.menuItemId === "generateQR_selection") {
             // 选中文字生成二维码
-            browser.storage.local.set({ qrCodeText: info.selectionText }, () => {
-                void openPopupCompat(); // 把选中文字写入本地存储后打开 popup
-            });
+            requestQrFromText(info.selectionText);
         } else if (info.menuItemId === "decodeQR") {
             // 页面图片二维码识别
             browser.tabs.sendMessage(tabId, {
@@ -111,7 +138,7 @@ export default defineBackground(() => {
         // 防止 Error: The message port closed before a response was received.
     });
 
-    // 火狐浏览器: 把工具栏图标显示在地址栏
+    // 火狐浏览器: 把图标显示在地址栏(page_action), 也是右键唤起 popup 的前提
     const showPageAction = (tabId?: number) => {
         const pageAction = browser.pageAction;
         if (!pageAction) return;

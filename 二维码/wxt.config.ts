@@ -49,17 +49,18 @@ export default defineConfig({
       48: 'icon.png',   // chrome://extensions 管理页面
       128: 'icon.png',  // 扩展商店
     },
-    // [Firefox MV2 兼容] 把图标显示在地址栏
-    page_action: {
+    // 工具栏按钮(MV3 action)。WXT 会在 Firefox MV2 下自动转换为 browser_action，
+    // 这样图标才会显示在工具栏并可被固定(pin)。
+    action: {
       default_icon: {
-        19: '/icon.png',
-        38: '/icon.png',
+        16: 'icon.png',
+        32: 'icon.png',
       },
       default_title: 'QRCode',
       default_popup: '/popup.html',
     },
-    // [Firefox MV2 兼容] 把图标显示在工具栏
-    browser_action: {
+    // [Firefox] 地址栏按钮(MV3 下与 action 可共存；Chrome MV3 会被 WXT 自动移除)
+    page_action: {
       default_icon: {
         19: '/icon.png',
         38: '/icon.png',

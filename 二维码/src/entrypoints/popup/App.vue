@@ -1,20 +1,63 @@
 <script lang="ts" setup>
+import { onMounted } from 'vue';
 import qrcode from 'qrcode-generator';
 
-// 等待 Popup 页面加载完成后开始工作
-document.addEventListener('DOMContentLoaded', async () => {
-  // 检查本地储存是否存在二维码源文本
-  const result = await browser.storage.local.get(['qrCodeText']);
-  // 有则生成其二维码
-  if (result.qrCodeText) {
-    generateQRCode(result.qrCodeText as string);
-    await browser.storage.local.remove('qrCodeText'); // 使用后清除该数据
+const QR_TEXT_KEY = 'qrCodeText';
+
+// 优先使用内存态的 session 存储, 不可用时回退 local
+const storageArea = () => browser.storage.session ?? browser.storage.local;
+const storageAreaName = () => (browser.storage.session ? 'session' : 'local');
+
+// 读取右键菜单写入的临时文本, 读取后立即清除, 避免污染下次打开
+async function takeStoredText(): Promise<string> {
+  const storage = storageArea();
+  const result = await storage.get(QR_TEXT_KEY);
+  const value = result?.[QR_TEXT_KEY];
+  if (typeof value === 'string' && value) {
+    await storage.remove(QR_TEXT_KEY);
+    return value;
   }
-  // 否则生成当前页面URL的二维码
-  else {
-    const tabs = await browser.tabs.query({ active: true, currentWindow: true });
-    generateQRCode(tabs[0].url as string);
+  return '';
+}
+
+// 优先 URL hash(新标签页兜底), 其次临时存储, 最后当前标签页 URL
+async function resolveQrText(): Promise<string> {
+  const storedText = await takeStoredText();
+  const hashText = new URLSearchParams(location.hash.slice(1)).get('text') ?? '';
+  if (hashText) return hashText;
+  if (storedText) return storedText;
+
+  const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
+  return tab?.url ?? '';
+}
+
+let currentText = '';
+
+// 避免重复渲染相同内容
+function render(text: string) {
+  if (!text || text === currentText) return;
+  currentText = text;
+  generateQRCode(text);
+}
+
+// background 在用户手势中同步打开 popup, 临时文本可能稍后才写入, 需监听变更刷新
+function onStorageChanged(
+  changes: Record<string, { newValue?: unknown }>,
+  areaName: string,
+) {
+  if (areaName !== storageAreaName()) return;
+  const value = changes[QR_TEXT_KEY]?.newValue;
+  if (typeof value === 'string' && value) {
+    render(value);
+    void storageArea().remove(QR_TEXT_KEY);
   }
+}
+
+// Popup 挂载后开始工作
+onMounted(async () => {
+  // 先监听, 再解析, 以覆盖 background 稍后写入的竞态
+  browser.storage.onChanged.addListener(onStorageChanged);
+  render(await resolveQrText());
 });
 
 

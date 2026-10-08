@@ -12,11 +12,11 @@
     "description": "Context menu item for generating QR code from current page"
   },
   "generateQR_link": {
-    "message": "Make QR from Link",
+    "message": "Generate QR Code for Link",
     "description": "Context menu item for generating QR code from link"
   },
   "generateQR_selection": {
-    "message": "Make QR from Selection",
+    "message": "Generate QR Code for Text",
     "description": "Context menu item for generating QR code from selected text"
   },
   "decodeQR": {
