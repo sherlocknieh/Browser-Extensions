@@ -66,7 +66,7 @@ function generateQRCode(text: string) {
 
   const container = document.getElementById('qrcode-container');
   if (!container) return;
-  container.innerHTML = '';  // 清空容器
+  container.replaceChildren();  // 清空容器
 
   try {
     // 使用 qrcode 库生成二维码
@@ -121,7 +121,12 @@ function generateQRCode(text: string) {
     container.appendChild(img);
 
   } catch (error) {
-    container.innerHTML = `<div style="color: red;">二维码生成失败:</div><div>${error}</div>`;
+    const title = document.createElement('div');
+    title.style.color = 'red';
+    title.textContent = '二维码生成失败:';
+    const detail = document.createElement('div');
+    detail.textContent = String(error);
+    container.replaceChildren(title, detail);
   }
 }
 </script>

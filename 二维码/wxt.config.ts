@@ -44,17 +44,17 @@ export default defineConfig({
       'activeTab',     // 当前标签页信息权限；获取页面URL, 读取网页图片等
     ],
     icons: {
-      16: 'icon.png',   // 工具栏,右键菜单,标签favicon
-      32: 'icon.png',   // Firefox 工具栏和 about:addons 管理页面
-      48: 'icon.png',   // chrome://extensions 管理页面
-      128: 'icon.png',  // 扩展商店
+      16: 'icon/16.png',   // 工具栏,右键菜单,标签favicon
+      32: 'icon/32.png',   // Firefox 工具栏和 about:addons 管理页面
+      48: 'icon/48.png',   // chrome://extensions 管理页面
+      128: 'icon/128.png', // 扩展商店
     },
     // 工具栏按钮(MV3 action)。WXT 会在 Firefox MV2 下自动转换为 browser_action，
     // 这样图标才会显示在工具栏并可被固定(pin)。
     action: {
       default_icon: {
-        16: 'icon.png',
-        32: 'icon.png',
+        16: 'icon/16.png',
+        32: 'icon/32.png',
       },
       default_title: 'QRCode',
       default_popup: '/popup.html',
@@ -62,8 +62,8 @@ export default defineConfig({
     // [Firefox] 地址栏按钮(MV3 下与 action 可共存；Chrome MV3 会被 WXT 自动移除)
     page_action: {
       default_icon: {
-        19: '/icon.png',
-        38: '/icon.png',
+        19: 'icon/19.png',
+        38: 'icon/38.png',
       },
       default_title: 'QRCode',
       default_popup: '/popup.html',
