@@ -112,10 +112,22 @@ export default defineBackground(() => {
     });
 
     // 火狐浏览器: 把工具栏图标显示在地址栏
-    browser.tabs.onUpdated.addListener((tabId, changeInfo) => {
-        // 只有当标签页 URL 更新时才显示图标, 避免在新标签页等不相关页面显示图标
-        if (changeInfo.url && browser.pageAction) {
-            browser.pageAction.show(tabId);
+    const showPageAction = (tabId?: number) => {
+        const pageAction = browser.pageAction;
+        if (!pageAction) return;
+        if (tabId != null) {
+            pageAction.show(tabId);
+            return;
         }
-    });
+        browser.tabs.query({}).then((tabs) => {
+            for (const tab of tabs) {
+                if (tab.id != null) pageAction.show(tab.id);
+            }
+        });
+    };
+
+    browser.tabs.onUpdated.addListener((tabId) => showPageAction(tabId));
+    browser.tabs.onActivated.addListener(({ tabId }) => showPageAction(tabId));
+    browser.runtime.onInstalled.addListener(() => showPageAction());
+    browser.runtime.onStartup.addListener(() => showPageAction());
 });
