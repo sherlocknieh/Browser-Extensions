@@ -39,9 +39,8 @@ export default defineConfig({
     host_permissions: ['file:///*'], // 允许访问本地文件(用于识别浏览器打开的本地图片)
     permissions: [
       'contextMenus',  // 右键菜单权限
-      'menus',         // Firefox 兼容：等价于 contextMenus
       'storage',       // 本地存储权限；选中文本生成二维码时需要此权限
-      'activeTab',     // 当前标签页信息权限；获取页面URL, 读取网页图片等
+      'tabs',          // 标签页权限；获取所有标签页信息, 包括 chrome://* 等受限页面
     ],
     icons: {
       16: 'icon/16.png',   // 工具栏,右键菜单,标签favicon
@@ -49,8 +48,7 @@ export default defineConfig({
       48: 'icon/48.png',   // chrome://extensions 管理页面
       128: 'icon/128.png', // 扩展商店
     },
-    // 工具栏按钮(MV3 action)。WXT 会在 Firefox MV2 下自动转换为 browser_action，
-    // 这样图标才会显示在工具栏并可被固定(pin)。
+    // Firefox 工具栏按钮
     action: {
       default_icon: {
         16: 'icon/16.png',
@@ -59,7 +57,7 @@ export default defineConfig({
       default_title: 'QRCode',
       default_popup: '/popup.html',
     },
-    // [Firefox] 地址栏按钮(MV3 下与 action 可共存；Chrome MV3 会被 WXT 自动移除)
+    // [Firefox] 地址栏按钮
     page_action: {
       default_icon: {
         19: 'icon/19.png',
