@@ -1,33 +1,27 @@
-# 二维码 (WXT + Vue3)
+# 二维码插件
 
-要用 Edge 浏览器调试 Chrome 扩展, 只需创建 .env 文件, 设置以下环境变量：
-```
-# linux
-CHROME_PATH=/usr/bin/microsoft-edge
-# windows
-# CHROME_PATH=C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe
-```
+生成二维码:
 
-## 第三方库依赖：
+- 为当前网页生成二维码
+- 为选中的文本生成二维码
+- 为网页中的链接生成二维码
 
+识别二维码:
+
+- 识别网页图片中的二维码
+- 粘贴图片/本地上传图片识别二维码
+
+## TODO
+
+- [ ] 截图识别的体验不好, 待优化
+- [ ] svg 图片二维码无法识别, 待解决
+- [ ] 不支持识别一个图片中的多个二维码
+- [ ] 不支持彩色二维码, 圆点二维码
+
+## 用到的库
+
+- 跨浏览器开发: wxt, vue3
 - 二维码识别: jsqr
 - 二维码生成: qrcode-generator
 - 网页截图: js-web-screen-shot
 - 弹窗提示: sweetalert2
-
-WXT 项目必须文件
-- wxt.config.ts
-- tsconfig.json
-- package.json
-- .wxt/ : pnpm install 后自动生成
-- public/ : 静态资源目录, 存放图标, 多语言文件等
-- src/ : 项目源码目录
-    - entrypoints/ : 入口文件目录
-        - background.js : 后台脚本入口文件
-        - content.js : 内容脚本入口文件
-
-## 目前功能
-- [x] 识别网页中的二维码
-- [x] 支持 Firefox
-## TODO
-
