@@ -53,9 +53,8 @@ export default defineBackground(() => {
         void openPopupCompat(`#text=${encodeURIComponent(value)}`);
     };
     
-    // 创建右键菜单
+    // 初始化右键菜单
     browser.runtime.onInstalled.addListener(() => {
-        // 清理旧菜单
         browser.contextMenus.removeAll(() => {
             // 添加菜单: 链接生成二维码
             browser.contextMenus.create({
