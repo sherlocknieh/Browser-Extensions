@@ -1,3 +1,8 @@
 allowBuilds:
   esbuild: true
   spawn-sync: true
+minimumReleaseAgeExclude:
+  - '@vue/compiler-core@3.5.44'
+  - '@vue/reactivity@3.5.44'
+  - '@vue/runtime-core@3.5.44'
+  - '@vue/shared@3.5.44'

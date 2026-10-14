@@ -12,14 +12,15 @@ export default defineConfig({
   modules: ['@wxt-dev/module-vue'], // 使用 Vue 模块
   srcDir: 'src',                    // 自定义源码目录
   webExt: {
-    // disabled: true,              // 调试时不自动打开浏览器
-    startUrls: [                    // 调试时自动打开的页面
+    keepProfileChanges: true,       // 记忆浏览器配置变更, 防止每次调试都打开全新无配置的浏览器
+    chromiumProfile: resolve('.wxt/dev-profile/chrome'), // 调试时 Chromium 配置文件路径
+    firefoxProfile: resolve('.wxt/dev-profile/firefox'), // 调试时 Firefox 配置文件路径
+    // 调试时自动打开的页面
+    startUrls: [
+      'about:newtab',
       'https://inftab.com/',
-    ],         
-    chromiumProfile: resolve('.wxt/dev-profile/chrome'), // 调试时使用的 Chromium 配置文件路径
-    firefoxProfile: resolve('.wxt/dev-profile/firefox'), // 调试时使用的 Firefox 配置文件路径
-    keepProfileChanges: true,               // 记忆浏览器配置变更
-    // 以上三行配置防止每次调试都打开全新无配置的浏览器
+      'https://en.wikipedia.org/wiki/QR_code',
+    ],
   },
   manifest: {
     name: '__MSG_appName__',
@@ -27,37 +28,29 @@ export default defineConfig({
     default_locale: 'en',
     author: 'sherlocknieh@gmail.com' as unknown as { email: string },
     homepage_url: 'https://github.com/sherlocknieh/Browser-Extensions',
-    // [Firefox 上传要求填写的项目]
+    host_permissions: ['file:///*'], // 允许访问本地文件
+    permissions: [
+      'contextMenus',  // 右键菜单权限
+      'storage',       // 本地存储权限
+      'tabs',          // 所有标签元数据权限
+      'activeTab',     // 前台标签页内容权限
+    ],
+    icons: {
+      16: 'icon/16.png',   // 工具栏,右键菜单,标签栏图标
+      32: 'icon/32.png',   // Firefox 工具栏和扩展管理页面
+      48: 'icon/48.png',   // Chrome 扩展管理页面
+      128: 'icon/128.png', // 扩展商店页面
+    },
+    // Firefox 上传要求填写的项目
     browser_specific_settings: {
       gecko: {
         id: "qrcode@sherlocknieh.github.io",
         data_collection_permissions:{
           required: ['none']
         }
-      }
-    },
-    host_permissions: ['file:///*'], // 允许访问本地文件(用于识别浏览器打开的本地图片)
-    permissions: [
-      'contextMenus',  // 右键菜单权限
-      'storage',       // 本地存储权限；选中文本生成二维码时需要此权限
-      'tabs',          // 标签页权限；获取所有标签页信息, 包括 chrome://* 等受限页面
-    ],
-    icons: {
-      16: 'icon/16.png',   // 工具栏,右键菜单,标签favicon
-      32: 'icon/32.png',   // Firefox 工具栏和 about:addons 管理页面
-      48: 'icon/48.png',   // chrome://extensions 管理页面
-      128: 'icon/128.png', // 扩展商店
-    },
-    // Firefox 工具栏按钮
-    action: {
-      default_icon: {
-        16: 'icon/16.png',
-        32: 'icon/32.png',
       },
-      default_title: 'QRCode',
-      default_popup: '/popup.html',
     },
-    // [Firefox] 地址栏按钮
+    // Firefox 地址栏按钮
     page_action: {
       default_icon: {
         19: 'icon/19.png',
