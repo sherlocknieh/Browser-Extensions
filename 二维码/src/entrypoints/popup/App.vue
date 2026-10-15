@@ -2,6 +2,9 @@
 import { onMounted } from 'vue';
 import qrcode from 'qrcode-generator';
 
+// 设置 qrcode 库使用 UTF-8 编码, 避免汉字乱码问题
+qrcode.stringToBytes = (s: string) => Array.from(new TextEncoder().encode(s));
+
 const QR_TEXT_KEY = 'qrCodeText';
 
 // 优先使用内存态的 session 存储, 不可用时回退 local
