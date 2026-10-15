@@ -1,10 +1,15 @@
-// WXT 规定的后台脚本入口
+// WXT 后台脚本入口
 export default defineBackground(() => {
+
+    // 1.数据准备
+
     // [Firefox MV2 兼容] 检测浏览器类型，确定使用哪个 context 值
     const actionContext = browser.action ? "action" : "browser_action";
 
     // [Firefox MV2 兼容] browserAction 的 openPopup 未包含在类型定义中
     type OpenPopupCapable = { openPopup?: () => Promise<void> };
+
+    // 2.函数准备
 
     // 根据 manifest 选择对应的 action API, 避免调用不存在的命名空间
     // 右键唤起时优先地址栏 page_action, 其次工具栏 action / browser_action
@@ -53,8 +58,23 @@ export default defineBackground(() => {
         void openPopupCompat(`#text=${encodeURIComponent(value)}`);
     };
     
-    // 初始化右键菜单
-    browser.runtime.onInstalled.addListener(() => {
+    // 火狐浏览器: 把图标显示在地址栏(page_action), 也是右键唤起 popup 的前提
+    const showPageAction = (tabId?: number) => {
+        const pageAction = browser.pageAction;
+        if (!pageAction) return;
+        if (tabId != null) {
+            pageAction.show(tabId);
+            return;
+        }
+        browser.tabs.query({}).then((tabs) => {
+            for (const tab of tabs) {
+                if (tab.id != null) pageAction.show(tab.id);
+            }
+        });
+    };
+    
+    // 右键菜单初始化函数
+    const addContextMenus = () => {
         browser.contextMenus.removeAll(() => {
             // 添加菜单: 链接生成二维码
             browser.contextMenus.create({
@@ -87,10 +107,10 @@ export default defineBackground(() => {
                 contexts: [actionContext] // 在工具栏图标右键菜单中显示
             });
         });
-    });
+    };
 
-    // 右键菜单点击事件处理
-    browser.contextMenus.onClicked.addListener((info, tab) => {
+    // 右键菜单点击事件处理函数
+    const handleContextMenusClick = (info: Browser.contextMenus.OnClickData, tab?: Browser.tabs.Tab) => {
         const tabId = tab?.id;      // 获取当前标签页 ID
         if (tabId == null) {
             console.warn('tabId is null');  // tabId 不存在则警告并返回
@@ -118,16 +138,16 @@ export default defineBackground(() => {
                 action: "pasteImageQR"
             });
         }
-    });
+    };
 
-    // 监听来自内容脚本的消息
-    browser.runtime.onMessage.addListener((request, _sender, sendResponse) => {
+    // 内容脚本消息处理函数
+    const handleContentScriptMessage = (request: any, _sender: Browser.runtime.MessageSender, sendResponse: (response: any) => void) => {
         // 跨域获取图片数据
         if (request.action === "fetchImage") {
             fetch(request.url)                       // 请求图片资源
                 .then(response => response.blob())   // 获取图片的 Blob 数据
                 .then(blob => {
-                    const reader = new FileReader(); // 使用 FileReader 将 Blob 转为 Data URL
+                    const reader = new FileReader();    // 使用 FileReader 将 Blob 转为 Data URL
                     reader.onload = () => sendResponse({ success: true, dataUrl: reader.result }); // 读取完成后发送回 Data URL
                     reader.readAsDataURL(blob);      // 开始读取 Blob 数据
                 })
@@ -135,25 +155,15 @@ export default defineBackground(() => {
         }
         return true; // 保持通道开启
         // 防止 Error: The message port closed before a response was received.
-    });
-
-    // 火狐浏览器: 把图标显示在地址栏(page_action), 也是右键唤起 popup 的前提
-    const showPageAction = (tabId?: number) => {
-        const pageAction = browser.pageAction;
-        if (!pageAction) return;
-        if (tabId != null) {
-            pageAction.show(tabId);
-            return;
-        }
-        browser.tabs.query({}).then((tabs) => {
-            for (const tab of tabs) {
-                if (tab.id != null) pageAction.show(tab.id);
-            }
-        });
     };
 
-    browser.tabs.onUpdated.addListener((tabId) => showPageAction(tabId));
-    browser.tabs.onActivated.addListener(({ tabId }) => showPageAction(tabId));
-    browser.runtime.onInstalled.addListener(() => showPageAction());
-    browser.runtime.onStartup.addListener(() => showPageAction());
+    // 3.事件监听
+
+    browser.tabs.onUpdated.addListener((tabId) => showPageAction(tabId));       // 标签页加载完成后, 显示地址栏图标
+    browser.tabs.onActivated.addListener(({ tabId }) => showPageAction(tabId)); // 标签页激活时, 显示地址栏图标
+    browser.runtime.onInstalled.addListener(addContextMenus);                   // 扩展安装完成后, 初始化右键菜单
+    browser.runtime.onInstalled.addListener(() => showPageAction());            // 扩展安装完成后, 显示地址栏图标
+    browser.runtime.onStartup.addListener(() => showPageAction());              // 扩展启动时, 显示地址栏图标
+    browser.contextMenus.onClicked.addListener(handleContextMenusClick);        // 右键菜单点击事件处理
+    browser.runtime.onMessage.addListener(handleContentScriptMessage);          // 监听来自内容脚本的消息
 });
