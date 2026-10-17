@@ -20,6 +20,7 @@ export default defineConfig({
       'about:newtab',
       'https://inftab.com/',
       'https://en.wikipedia.org/wiki/QR_code',
+      'https://www.deepseek.com/images/app-qrcode.png',
     ],
   },
   manifest: {

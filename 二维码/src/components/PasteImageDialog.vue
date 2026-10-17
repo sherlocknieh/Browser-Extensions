@@ -23,7 +23,15 @@ const resultMessage = ref('');
 const resultData = ref('');
 const copyLabel = ref(t('copyContent'));
 
-const supportedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/bmp', 'image/gif', 'image/webp'];
+const supportedTypes = [
+    'image/jpeg',
+    'image/jpg',
+    'image/png',
+    'image/bmp',
+    'image/gif',
+    'image/webp',
+    'image/svg+xml',
+];
 
 const hasImage = computed(() => Boolean(currentImageData.value));
 const isSuccess = computed(() => resultType.value === 'success');
