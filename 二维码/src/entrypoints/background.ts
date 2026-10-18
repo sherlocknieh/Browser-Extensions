@@ -1,50 +1,25 @@
 // WXT 后台脚本入口
 export default defineBackground(() => {
 
-    // 函数准备
-
-    type OpenPopupCapable = { openPopup: () => Promise<void> };
-
-    // 打开 popup 窗口
-    const openPopupCompat = async (hash = "") => {
-        // 优先地址栏 page_action, 其次工具栏 action
-        const action = browser.pageAction as unknown as OpenPopupCapable || browser.action;
-        try {
-            await action.openPopup();
-            return;
-        } catch (error) {
-            console.warn("openPopup 调用失败，使用小弹窗打开 popup:", error);
-        }
-    };
-
-    // 右键菜单选中文字/链接后, 把文本交给 popup 生成二维码
-    const requestQrFromText = (text?: string) => {
+    // 生成并显示二维码
+    const showQRcode = (text?: string) => {
+        // 过滤空文本
         const value = text?.trim();
         if (!value) return;
 
-        // 先写入文本, 再同步调用 openPopup
+        // 文本储存到本地
         const storage = browser.storage.session ?? browser.storage.local;
         void storage.set({ qrCodeText: value });
-        // Firefox 要求 openPopup 必须在用户手势处理函数中调用, 不能先 await
-        void openPopupCompat(`#text=${encodeURIComponent(value)}`);
+
+        // 防止报 browser.pageAction 没有 openPopup 方法的错误(Firefox 的 pageAction 支持 openPopup 方法)
+        type OpenPopupCapable = { openPopup: () => Promise<void> };
+        // 优先地址栏 page_action, 其次工具栏 action
+        const action = browser.pageAction as unknown as OpenPopupCapable || browser.action;
+        // 打开 popup 窗口
+        action.openPopup();
     };
 
-    // 火狐浏览器: 把图标显示在地址栏(page_action)
-    const showPageAction = (tabId?: number) => {
-        const pageAction = browser.pageAction;
-        if (!pageAction) return;
-        if (tabId != null) {
-            pageAction.show(tabId);
-            return;
-        }
-        browser.tabs.query({}).then((tabs) => {
-            for (const tab of tabs) {
-                if (tab.id != null) pageAction.show(tab.id);
-            }
-        });
-    };
-
-    // 右键菜单初始化函数
+    // 右键菜单初始化
     const addContextMenus = () => {
         browser.contextMenus.removeAll(() => {
             // 添加菜单: 识别图中二维码
@@ -65,22 +40,22 @@ export default defineBackground(() => {
                 title: browser.i18n.getMessage("generateQR_selection"),
                 contexts: ["selection"]
             });
-            // // 添加菜单: 截屏识别二维码
-            // browser.contextMenus.create({
-            //     id: "screenshotQR",
-            //     title: browser.i18n.getMessage("screenShot"),
-            //     contexts: ["action", "image"]
-            // });
             // 添加菜单: 粘贴图片识别二维码
             browser.contextMenus.create({
                 id: "pasteImageQR",
                 title: browser.i18n.getMessage("pasteImage"),
-                contexts: ["action"] // 在工具栏图标右键菜单中显示
+                contexts: ["action", "page_action"] // 在工具栏图标和地址栏 PageAction 右键菜单中显示
+            });
+            // 添加菜单: 截屏识别二维码
+            browser.contextMenus.create({
+                id: "screenshotQR",
+                title: browser.i18n.getMessage("screenShot"),
+                contexts: ["action", "image", "page_action"]
             });
         });
     };
 
-    // 右键菜单点击事件处理函数
+    // 右键菜单点击事件处理
     const handleContextMenusClick = (info: Browser.contextMenus.OnClickData, tab?: Browser.tabs.Tab) => {
         const tabId = tab?.id;      // 获取当前标签页 ID
         if (tabId == null) {
@@ -88,30 +63,45 @@ export default defineBackground(() => {
             return;
         } else if (info.menuItemId === "generateQR_link") {
             // 链接生成二维码
-            requestQrFromText(info.linkUrl);
+            showQRcode(info.linkUrl);
         } else if (info.menuItemId === "generateQR_selection") {
             // 选中文字生成二维码
-            requestQrFromText(info.selectionText);
+            showQRcode(info.selectionText);
         } else if (info.menuItemId === "decodeQR") {
             // 页面图片二维码识别
             browser.tabs.sendMessage(tabId, {
                 action: "decodeQR",
                 imageUrl: info.srcUrl
-            });   // 此URL会包含域名, 无论图片是否用了相对路径
-        // } else if (info.menuItemId === "screenshotQR") {
-        //     // 截图识别二维码
-        //     browser.tabs.sendMessage(tabId, {
-        //         action: "screenshotQR"
-        //     });
+            });   // 此URL是包含域名的完整URL, 无论图片是否用了相对路径
         } else if (info.menuItemId === "pasteImageQR") {
             // 粘贴图片识别二维码
             browser.tabs.sendMessage(tabId, {
                 action: "pasteImageQR"
             });
+        } else if (info.menuItemId === "screenshotQR") {
+            // 截图识别二维码
+            browser.tabs.sendMessage(tabId, {
+                action: "screenshotQR"
+            });
         }
     };
 
-    // 内容脚本消息处理函数
+    // 显示地址栏图标 (Firefox)
+    const showPageAction = (tabId?: number) => {
+        const pageAction = browser.pageAction;
+        if (!pageAction) return;
+        if (tabId != null) {
+            pageAction.show(tabId);
+            return;
+        }
+        browser.tabs.query({}).then((tabs) => {
+            for (const tab of tabs) {
+                if (tab.id != null) pageAction.show(tab.id);
+            }
+        });
+    };
+
+    // 内容脚本消息处理
     const handleContentScriptMessage = (request: any, _sender: Browser.runtime.MessageSender, sendResponse: (response: any) => void) => {
         // 跨域获取图片数据
         if (request.action === "fetchImage") {
@@ -128,13 +118,9 @@ export default defineBackground(() => {
         // 防止 Error: The message port closed before a response was received.
     };
 
-    // 3.事件监听
-
-    browser.tabs.onUpdated.addListener((tabId) => showPageAction(tabId));       // 标签页加载完成后, 显示地址栏图标
-    browser.tabs.onActivated.addListener(({ tabId }) => showPageAction(tabId)); // 标签页激活时, 显示地址栏图标
-    browser.runtime.onInstalled.addListener(addContextMenus);                   // 扩展安装完成后, 初始化右键菜单
-    browser.runtime.onInstalled.addListener(() => showPageAction());            // 扩展安装完成后, 显示地址栏图标
-    browser.runtime.onStartup.addListener(() => showPageAction());              // 扩展启动时, 显示地址栏图标
-    browser.contextMenus.onClicked.addListener(handleContextMenusClick);        // 右键菜单点击事件处理
-    browser.runtime.onMessage.addListener(handleContentScriptMessage);          // 监听来自内容脚本的消息
+    // 事件监听
+    browser.runtime.onInstalled.addListener(addContextMenus);               // 扩展安装完成后, 初始化右键菜单
+    browser.tabs.onUpdated.addListener((tabId) => showPageAction(tabId));   // 标签页加载完成后, 显示地址栏图标
+    browser.contextMenus.onClicked.addListener(handleContextMenusClick);    // 右键菜单点击事件处理
+    browser.runtime.onMessage.addListener(handleContentScriptMessage);      // 处理内容脚本的请求
 });
