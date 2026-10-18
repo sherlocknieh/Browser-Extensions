@@ -3,10 +3,12 @@ export default defineBackground(() => {
 
     // 函数准备
 
+    type OpenPopupCapable = { openPopup: () => Promise<void> };
+
     // 打开 popup 窗口
     const openPopupCompat = async (hash = "") => {
         // 优先地址栏 page_action, 其次工具栏 action
-        const action = browser.pageAction || browser.action;
+        const action = browser.pageAction as unknown as OpenPopupCapable || browser.action;
         try {
             await action.openPopup();
             return;
