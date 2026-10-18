@@ -4,23 +4,23 @@
     "description": "应用名称"
   },
   "appDescription": {
-    "message": "生成和识别二维码",
+    "message": "二维码生成和识别",
     "description": "应用描述"
   },
   "generateQR_page": {
-    "message": "当前页面二维码",
+    "message": "为当前页面生成二维码",
     "description": "右键菜单项：从当前页面生成二维码"
   },
   "generateQR_link": {
-    "message": "链接生成二维码",
+    "message": "为此链接生成二维码",
     "description": "右键菜单项：从链接生成二维码"
   },
   "generateQR_selection": {
-    "message": "选中文字生成二维码",
+    "message": "为选中文字生成二维码",
     "description": "右键菜单项：从选中文字生成二维码"
   },
   "decodeQR": {
-    "message": "识别图中二维码",
+    "message": "识别图中的二维码",
     "description": "右键菜单项：识别图片中的二维码"
   },
   "screenShot": {
@@ -32,7 +32,7 @@
     "description": "获取图片时的加载提示"
   },
   "decodingQR": {
-    "message": "正在解析二维码...",
+    "message": "正在识别二维码...",
     "description": "解析二维码时的加载提示"
   },
   "recognitionSuccess": {
@@ -54,10 +54,6 @@
   "unableLoadImageData": {
     "message": "无法加载图片数据",
     "description": "图片加载失败错误信息"
-  },
-  "noValidQRCode": {
-    "message": "未发现有效二维码",
-    "description": "未找到二维码的错误信息"
   },
   "error": {
     "message": "错误",

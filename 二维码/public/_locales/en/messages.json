@@ -4,39 +4,39 @@
     "description": "Application name"
   },
   "appDescription": {
-    "message": "Generate and recognize QR codes",
+    "message": "QR codes generator and recognizer",
     "description": "Application description"
   },
   "generateQR_page": {
-    "message": "QR for This Page",
+    "message": "QR Code for This Page",
     "description": "Context menu item for generating QR code from current page"
   },
   "generateQR_link": {
-    "message": "Generate QR Code for Link",
-    "description": "Context menu item for generating QR code from link"
+    "message": "QR Code for This Link",
+    "description": "Context menu item for generating QR code from current link"
   },
   "generateQR_selection": {
-    "message": "Generate QR Code for Text",
+    "message": "QR Code for Selected Text",
     "description": "Context menu item for generating QR code from selected text"
   },
   "decodeQR": {
-    "message": "Scan QR in Image",
+    "message": "Scan QR Code in This Image",
     "description": "Context menu item for recognizing QR code in image"
   },
   "screenShot": {
-    "message": "Screenshot to Scan QR",
+    "message": "Take a Screenshot to Scan QR Code",
     "description": "Context menu item for taking screenshot to recognize QR code"
   },
   "fetchingImage": {
-    "message": "Getting the image...",
+    "message": "Fetching the image...",
     "description": "Loading message when fetching image"
   },
   "decodingQR": {
-    "message": "Scanning the QR...",
+    "message": "Scanning the QR Code...",
     "description": "Loading message when decoding QR code"
   },
   "recognitionSuccess": {
-    "message": "Scanned successfully",
+    "message": "Scan Success",
     "description": "Success dialog title"
   },
   "openLink": {
@@ -54,10 +54,6 @@
   "unableLoadImageData": {
     "message": "Can't read the image data",
     "description": "Error message for image loading failure"
-  },
-  "noValidQRCode": {
-    "message": "No QR code found",
-    "description": "Error message when no QR code is found"
   },
   "error": {
     "message": "Error",

@@ -168,7 +168,7 @@ async function decodeAndNotify(imageData: ImageData) {
         toast: false,
         icon: 'warning',
         title: t('recognitionFailed'),
-        text: t('noValidQRCode'),
+        text: t('recognitionFailedMsg'),
         confirmButtonText: t('confirm'),
         showCloseButton: true,
     });
