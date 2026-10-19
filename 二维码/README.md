@@ -30,5 +30,15 @@
 - 网页截图: js-web-screen-shot
 - 弹窗提示: sweetalert2
 
-
 # 发布
+
+使用 `wxt submit` 自动向商店提交新版本。
+
+```bash
+# 配置密钥
+pnpm wxt submit init
+# 测试密钥
+pnpm wxt submit --dry-run
+# 提交新版本
+pnpm wxt submit
+```
