@@ -143,13 +143,6 @@ function installScreenshotStyles() {
 
 export function useScreenshot() {
     const startScreenshot = async () => {
-        const pageReadyAtStart = document.readyState === 'complete';
-        if (!pageReadyAtStart || !hasBeenVisibleLongEnough()) {
-            return Promise.reject({
-                type: 'webRtcFailed',
-            } satisfies ScreenshotResult);
-        }
-
         const webRtcResult = await waitForWebRtcSupport();
         if (webRtcResult) {
             return Promise.reject(webRtcResult);
@@ -239,10 +232,10 @@ export function useScreenshot() {
                         return;
                     }
                         if (response.code !== 0) {
-                            const pageReady = pageReadyAtStart && document.readyState === 'complete';
+                            const pageReady = document.readyState === 'complete';
                             cleanup();
                             reject(
-                                pageReady && !visibilityInterrupted
+                                pageReady && !visibilityInterrupted && hasBeenVisibleLongEnough()
                                     ? ({ type: 'failed' } satisfies ScreenshotResult)
                                     : ({ type: 'webRtcFailed' } satisfies ScreenshotResult),
                             );
@@ -252,11 +245,11 @@ export function useScreenshot() {
                         if (silentlyClosing) {
                             return;
                         }
-                        const pageReady = pageReadyAtStart && document.readyState === 'complete';
+                        const pageReady = document.readyState === 'complete';
                         if (!captureStarted) {
                             cleanup();
                             reject(
-                                pageReady && !visibilityInterrupted
+                                pageReady && !visibilityInterrupted && hasBeenVisibleLongEnough()
                                     ? ({ type: 'failed' } satisfies ScreenshotResult)
                                     : ({ type: 'webRtcFailed' } satisfies ScreenshotResult),
                             );
@@ -264,7 +257,7 @@ export function useScreenshot() {
                         }
                         cleanup();
                         reject(
-                            pageReady && !visibilityInterrupted
+                            pageReady && !visibilityInterrupted && hasBeenVisibleLongEnough()
                                 ? ({ type: 'cancelled' } satisfies ScreenshotResult)
                                 : ({ type: 'webRtcFailed' } satisfies ScreenshotResult),
                         );
