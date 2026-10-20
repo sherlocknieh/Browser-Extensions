@@ -15,11 +15,72 @@ import NotifyHost from '@/components/NotifyHost.vue';
 import PasteImageDialog from '@/components/PasteImageDialog.vue';
 import { useNotify } from '@/composables/useNotify';
 import { useScreenshot, type ScreenshotResult } from '@/composables/useScreenshot';
+import {
+    showPopupNotice,
+    type PopupNoticePayload,
+} from '@/services/popupNotice';
 
 
 
-const { fire, close, showLoading } = useNotify();
+const { fire, showLoading } = useNotify();
 const { startScreenshot } = useScreenshot();
+
+// popup 无法显示时的页面内兜底通知
+function fireLocal(payload: PopupNoticePayload) {
+    const { loading, ...options } = payload.options;
+    return fire({
+        ...options,
+        didOpen: loading ? () => showLoading() : undefined,
+    });
+}
+
+// 通知优先在 popup 中显示, 失败时回退到当前页面
+async function notify(payload: PopupNoticePayload): Promise<boolean> {
+    if (await showPopupNotice(payload)) return true;
+    fireLocal(payload);
+    return false;
+}
+
+// 识别结果需要用户选择, popup 可用时由 popup 直接完成打开/复制
+async function notifyResult(result: string) {
+    const isLink = isLinkText(result);
+    const payload: PopupNoticePayload = {
+        options: {
+            toast: false,
+            icon: 'success',
+            title: t('recognitionSuccess'),
+            text: result,
+            showCancelButton: isLink,
+            confirmButtonText: isLink ? t('openLink') : t('copyContent'),
+            cancelButtonText: isLink ? t('copyLink') : undefined,
+            showCloseButton: true,
+        },
+        confirmAction: isLink
+            ? { kind: 'open', value: result }
+            : { kind: 'copy', value: result },
+        cancelAction: isLink ? { kind: 'copy', value: result } : undefined,
+    };
+
+    if (await showPopupNotice(payload)) return;
+
+    // popup 不可用时在页面内展示并处理结果
+    const response = await fireLocal(payload);
+
+    if (isLink) {
+        if (response.isConfirmed) {
+            window.open(toOpenableUrl(result), '_blank');
+            return;
+        }
+        if (response.dismiss === 'cancel') {
+            await navigator.clipboard.writeText(result);
+        }
+        return;
+    }
+
+    if (response.isConfirmed) {
+        await navigator.clipboard.writeText(result);
+    }
+}
 
 
 // 图片粘贴对话框的开关变量
@@ -58,13 +119,15 @@ async function handleImageUrl(imageUrl: string) {
     const origin = window.location.origin;
     const needsProxy = !isSameOrigin(imageUrl, origin);
     if (needsProxy) {
-        fire({
-            toast: true,
-            icon: 'info',
-            title: t('fetchingImage'),
-            text: t('crossOriginNotice'),
-            showCloseButton: true,
-            didOpen: () => showLoading(),
+        await notify({
+            options: {
+                toast: true,
+                icon: 'info',
+                title: t('fetchingImage'),
+                text: t('crossOriginNotice'),
+                showCloseButton: true,
+                loading: true,
+            },
         });
     }
 
@@ -73,17 +136,28 @@ async function handleImageUrl(imageUrl: string) {
             origin,
             fetchViaProxy: needsProxy ? fetchImageViaProxy : undefined,
         });
-        close();
         await decodeAndNotify(imageData);
     } catch (error) {
-        close();
+        // 本地文件在部分浏览器中会因 canvas 安全限制无法读取像素，
+        // 此时退回截取当前标签页(直接打开的图片会完整显示在视口中)。
+        if (imageUrl.startsWith('file:') && window.location.protocol === 'file:') {
+            try {
+                const dataUrl = await captureVisibleTab();
+                await decodeAndNotify(await getImageDataFromDataUrl(dataUrl));
+                return;
+            } catch {
+                // 截图也失败时继续展示原始错误
+            }
+        }
         const message = error instanceof Error ? error.message : String(error);
-        fire({
-            toast: true,
-            icon: 'error',
-            title: t('imageFetchFailed'),
-            text: message,
-            showCloseButton: true,
+        await notify({
+            options: {
+                toast: true,
+                icon: 'error',
+                title: t('imageFetchFailed'),
+                text: message,
+                showCloseButton: true,
+            },
         });
     }
 }
@@ -94,23 +168,27 @@ function notifyScreenshotResult(result: ScreenshotResult) {
         if (result.silent) {
             return;
         }
-        fire({
-            toast: true,
-            icon: 'error',
-            title: t('screenshotCancelled'),
-            text: t('screenshotCancelledMsg'),
-            showCloseButton: true,
+        void notify({
+            options: {
+                toast: true,
+                icon: 'error',
+                title: t('screenshotCancelled'),
+                text: t('screenshotCancelledMsg'),
+                showCloseButton: true,
+            },
         });
         return;
     }
 
     if (result.type === 'failed') {
-        fire({
-            toast: true,
-            icon: 'warning',
-            title: t('screenshotFailed'),
-            text: t('screenshotFailedMsg'),
-            showCloseButton: true,
+        void notify({
+            options: {
+                toast: true,
+                icon: 'warning',
+                title: t('screenshotFailed'),
+                text: t('screenshotFailedMsg'),
+                showCloseButton: true,
+            },
         });
         return;
     }
@@ -139,12 +217,14 @@ async function handleScreenshot() {
             return;
         }
         const message = error instanceof Error ? error.message : String(error);
-        fire({
-            toast: true,
-            icon: 'error',
-            title: t('screenshotFailed'),
-            text: message || t('screenshotFailedMsg'),
-            showCloseButton: true,
+        void notify({
+            options: {
+                toast: true,
+                icon: 'error',
+                title: t('screenshotFailed'),
+                text: message || t('screenshotFailedMsg'),
+                showCloseButton: true,
+            },
         });
     }
 }
@@ -152,12 +232,14 @@ async function handleScreenshot() {
 // 解码过程+通知流程
 async function decodeAndNotify(imageData: ImageData) {
     // 显示正在识别的通知
-    fire({
-        toast: true,
-        icon: 'info',
-        title: t('decodingQR'),
-        didOpen: () => showLoading(),
-        showCloseButton: true,
+    await notify({
+        options: {
+            toast: true,
+            icon: 'info',
+            title: t('decodingQR'),
+            showCloseButton: true,
+            loading: true,
+        },
     });
 
     // 等待短暂时间以确保通知显示后再进行计算密集型的识别操作，避免界面卡顿
@@ -165,48 +247,39 @@ async function decodeAndNotify(imageData: ImageData) {
 
     // 调用二维码识别函数，获取识别结果
     const result = decodeQrFromImageData(imageData);
-    
-    close();// 关闭正在识别的通知
 
     if (result) {
         // 文字结果没有可打开的链接, 只提供复制操作
-        const isLink = isLinkText(result);
-
-        const response = await fire({
-            toast: false,
-            icon: 'success',
-            title: t('recognitionSuccess'),
-            text: result,
-            showCancelButton: isLink,
-            confirmButtonText: isLink ? t('openLink') : t('copyContent'),
-            cancelButtonText: isLink ? t('copyLink') : undefined,
-            showCloseButton: true,
-        });
-
-        if (isLink) {
-            if (response.isConfirmed) {
-                window.open(toOpenableUrl(result), '_blank');
-                return;
-            }
-            if (response.dismiss === 'cancel') {
-                await navigator.clipboard.writeText(result);
-            }
-            return;
-        }
-
-        if (response.isConfirmed) {
-            await navigator.clipboard.writeText(result);
-        }
+        await notifyResult(result);
         return;
     }
 
-    fire({
-        toast: false,
-        icon: 'warning',
-        title: t('recognitionFailed'),
-        text: t('recognitionFailedMsg'),
-        confirmButtonText: t('confirm'),
-        showCloseButton: true,
+    await notify({
+        options: {
+            toast: false,
+            icon: 'warning',
+            title: t('recognitionFailed'),
+            text: t('recognitionFailedMsg'),
+            confirmButtonText: t('confirm'),
+            showCloseButton: true,
+        },
+    });
+}
+
+// 截取当前标签页可见区域，作为本地图片无法直接读取时的兜底
+function captureVisibleTab(): Promise<string> {
+    return new Promise((resolve, reject) => {
+        browser.runtime.sendMessage({ action: 'captureVisibleTab' }, (response) => {
+            if (browser.runtime.lastError) {
+                reject(new Error(browser.runtime.lastError.message || 'Background did not respond.'));
+                return;
+            }
+            if (response?.success && response.dataUrl) {
+                resolve(response.dataUrl);
+                return;
+            }
+            reject(new Error(response?.error || t('screenshotFailedMsg')));
+        });
     });
 }
 

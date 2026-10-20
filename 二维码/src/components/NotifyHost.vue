@@ -7,10 +7,16 @@ import {
     notifyState,
 } from '@/composables/useNotify';
 
+// embedded: 在 popup 等紧凑容器中直接渲染为页面内容, 不再悬浮于内容之上
+const props = defineProps<{ embedded?: boolean }>();
+const embedded = computed(() => props.embedded === true);
+
 const t = (key: 'confirm' | 'closeBtn', fallback: string) => browser.i18n.getMessage(key) || fallback;
 
 const options = computed(() => notifyState.options);
 const isToast = computed(() => options.value.toast === true);
+// popup 内的 toast 只是过程提示, 不渲染操作按钮
+const showActions = computed(() => !(embedded.value && isToast.value));
 const icon = computed(() => options.value.icon ?? 'info');
 const confirmText = computed(() => options.value.confirmButtonText || t('confirm', 'OK'));
 const cancelText = computed(() => options.value.cancelButtonText || 'Cancel');
@@ -26,11 +32,15 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
 </script>
 
 <template>
-    <Teleport to="body">
+    <Teleport to="body" :disabled="embedded">
         <Transition name="qr-notify-fade">
-            <div v-if="notifyState.open" class="qr-notify-root">
+            <div
+                v-if="notifyState.open"
+                class="qr-notify-root"
+                :class="{ 'qr-notify-root--embedded': embedded }"
+            >
                 <div
-                    v-if="isToast"
+                    v-if="isToast && !embedded"
                     class="qr-notify-toast"
                     role="status"
                     aria-live="polite"
@@ -71,8 +81,13 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                     </button>
                 </div>
 
-                <div v-else class="qr-notify-overlay">
-                    <div class="qr-notify-modal" role="dialog" aria-modal="true">
+                <div v-else class="qr-notify-overlay" :class="{ 'qr-notify-overlay--embedded': embedded }">
+                    <div
+                        class="qr-notify-modal"
+                        :class="{ 'qr-notify-modal--embedded': embedded }"
+                        role="dialog"
+                        :aria-modal="embedded ? undefined : 'true'"
+                    >
                         <button
                             v-if="options.showCloseButton"
                             type="button"
@@ -112,7 +127,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                             </div>
                         </div>
 
-                        <div class="qr-notify-actions">
+                        <div v-if="showActions" class="qr-notify-actions">
                             <button
                                 v-if="options.showCancelButton"
                                 type="button"
@@ -143,6 +158,16 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
     font-size: 14px;
     line-height: 1.5;
     text-align: left;
+}
+
+/* popup 内: 通知就是 popup 的内容, 不浮层、不投影、不留边 */
+.qr-notify-root--embedded {
+    position: relative;
+    inset: auto;
+    width: 100%;
+    min-width: 300px;
+    pointer-events: auto;
+    background: #fff;
 }
 
 .qr-notify-toast,
@@ -178,6 +203,15 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
     pointer-events: auto;
 }
 
+.qr-notify-overlay--embedded {
+    position: static;
+    inset: auto;
+    box-sizing: border-box;
+    width: 100%;
+    padding: 20px 18px;
+    background: transparent;
+}
+
 .qr-notify-modal {
     position: relative;
     display: flex;
@@ -188,6 +222,16 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
     padding: 24px 20px 20px;
     overflow: auto;
     text-align: center;
+}
+
+.qr-notify-modal--embedded {
+    width: 100%;
+    max-height: none;
+    padding: 4px 0 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    overflow: visible;
 }
 
 .qr-notify-body {
@@ -393,5 +437,11 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
 .qr-notify-fade-enter-from .qr-notify-modal,
 .qr-notify-fade-leave-to .qr-notify-modal {
     transform: scale(0.96);
+}
+
+/* popup 内通知不缩放, 只做淡入淡出 */
+.qr-notify-fade-enter-from .qr-notify-modal--embedded,
+.qr-notify-fade-leave-to .qr-notify-modal--embedded {
+    transform: none;
 }
 </style>

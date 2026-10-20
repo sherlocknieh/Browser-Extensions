@@ -3,7 +3,8 @@ import { onMounted, ref } from 'vue';
 import qrcode from 'qrcode-generator';
 import { decodeQrFromImageData, getImageDataFromDataUrl } from '@/services/qrScanner';
 import { isLinkText, toOpenableUrl } from '@/services/linkText';
-import { useNotify } from '@/composables/useNotify';
+import { useNotify, notifyState } from '@/composables/useNotify';
+import { usePopupNoticeHost } from '@/composables/usePopupNoticeHost';
 import NotifyHost from '@/components/NotifyHost.vue';
 
 // 设置 qrcode 库使用 UTF-8 编码, 避免汉字乱码问题
@@ -20,6 +21,8 @@ const storageArea = () => browser.storage.session ?? browser.storage.local;
 const storageAreaName = () => (browser.storage.session ? 'session' : 'local');
 
 const { fire, close, showLoading } = useNotify();
+// 接收内容脚本转发的通知并代为处理结果操作
+usePopupNoticeHost();
 
 const t = (key: Parameters<typeof browser.i18n.getMessage>[0]) =>
   browser.i18n.getMessage(key) || String(key);
@@ -29,6 +32,8 @@ let scanning = false;
 const scanActive = ref(false);
 // 当前页面是 PDF 时显示“识别当前视口”入口
 const pdfMode = ref(false);
+// 生成二维码后才显示占位, 避免 popup 打开瞬间先闪一下二维码区域
+const hasQrContent = ref(false);
 
 // 读取右键菜单写入的临时图片地址, 读取后立即清除
 async function takeStoredImageUrl(): Promise<string> {
@@ -227,6 +232,7 @@ let currentText = '';
 function render(text: string) {
   if (!text || text === currentText) return;
   currentText = text;
+  hasQrContent.value = true;
   generateQRCode(text);
 }
 
@@ -365,11 +371,11 @@ function generateQRCode(text: string) {
 
 <template>
   <div
-    v-if="!pdfMode && !scanActive"
+    v-if="hasQrContent && !notifyState.open && !pdfMode && !scanActive"
     id="qrcode-container"
     class="bg-slate-50 border border-slate-200 rounded-lg shadow-sm"
   ></div>
-  <div v-if="pdfMode && !scanActive" class="pdf-scan">
+  <div v-if="!notifyState.open && pdfMode && !scanActive" class="pdf-scan">
     <p class="pdf-scan-hint">{{ t('pdfScanHint') }}</p>
     <button type="button" class="pdf-scan-button" @click="startCapture">
       {{ t('pdfScanButton') }}
