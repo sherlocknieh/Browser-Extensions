@@ -1,5 +1,8 @@
 import jsQR from 'jsqr';
 
+// SVG 提取像素时的目标尺寸上限，避免超大 SVG 生成大量候选图后占用过多内存。
+const SVG_SCAN_DIMENSION = 512;
+
 // 通过后台脚本获取跨域图片，并返回可供识别器使用的 Data URL。
 type ProxyFetcher = (url: string) => Promise<string>;
 
@@ -53,10 +56,12 @@ export function decodeQrFromImageData(imageData: ImageData): string | null {
     return null;
 }
 
-// 创建多组识别候选图像。
-// 不同图片的颜色、对比度和二维码模块样式差异较大，多组候选图可以提高识别成功率。
-function createDecodeCandidates(imageData: ImageData): ImageData[] {
-    const candidates = [imageData];
+// 按需生成识别候选图像。
+// 不同图片的颜色、对比度和二维码模块样式差异较大，多组候选图可以提高识别成功率；
+// 使用生成器可以在识别成功后立即停止，避免一次性构建全部候选图（数量可达 40 多张）。
+function* createDecodeCandidates(imageData: ImageData): Generator<ImageData> {
+    yield imageData;
+
     // 分别使用红、绿、蓝通道和 RGB 平均值，减少背景颜色对二值化的影响。
     const channels = [
         (red: number, green: number, blue: number) => red,
@@ -67,18 +72,16 @@ function createDecodeCandidates(imageData: ImageData): ImageData[] {
 
     for (const channel of channels) {
         const grayscale = toGrayscale(imageData, channel);
-        candidates.push(grayscale);
+        yield grayscale;
         // 多个阈值用于适应亮度不均、压缩失真和低对比度图片。
         for (const threshold of [64, 96, 128, 160, 192]) {
             const binary = thresholdImage(grayscale, threshold);
-            candidates.push(binary);
+            yield binary;
             // 圆点型二维码的模块之间有间隙，轻微膨胀黑色像素可帮助 jsQR
             // 连接模块并识别定位点；原始二值图仍会优先尝试。
-            candidates.push(dilateBlackPixels(binary, 1));
+            yield dilateBlackPixels(binary, 1);
         }
     }
-
-    return candidates;
 }
 
 // 将指定颜色通道转换为灰度图，同时保留原始透明度。
@@ -141,7 +144,7 @@ function dilateBlackPixels(imageData: ImageData, radius: number): ImageData {
 }
 
 // 将 HTMLImageElement 绘制到 Canvas，并提取完整像素数据。
-// SVG 会先适度放大，以避免原始尺寸过小导致二维码细节丢失。
+// SVG 会先缩放到合适的尺寸：过小则放大以保留二维码细节，过大则缩小以避免生成候选图时占用过多内存。
 export async function getImageDataFromImageElement(img: HTMLImageElement): Promise<ImageData> {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -156,14 +159,26 @@ export async function getImageDataFromImageElement(img: HTMLImageElement): Promi
     }
 
     const isSvg = isSvgSource(img.currentSrc || img.src);
-    const scale = isSvg ? Math.max(1, Math.min(8, Math.ceil(1024 / Math.max(sourceWidth, sourceHeight)))) : 1;
-    canvas.width = sourceWidth * scale;
-    canvas.height = sourceHeight * scale;
+    const scale = isSvg ? getSvgScale(sourceWidth, sourceHeight) : 1;
+    canvas.width = Math.max(1, Math.round(sourceWidth * scale));
+    canvas.height = Math.max(1, Math.round(sourceHeight * scale));
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.imageSmoothingEnabled = false;
+    // 放大时保持模块边缘锐利；缩小时启用平滑，避免采样丢失二维码细节。
+    ctx.imageSmoothingEnabled = scale < 1;
+    ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     return ctx.getImageData(0, 0, canvas.width, canvas.height);
+}
+
+// 计算 SVG 的绘制缩放比例，使最长边不超过 SVG_SCAN_DIMENSION。
+// 尺寸较小时最多放大 8 倍以保留二维码细节，放大后同样不超过上限。
+function getSvgScale(sourceWidth: number, sourceHeight: number): number {
+    const maxDimension = Math.max(sourceWidth, sourceHeight);
+    if (maxDimension > SVG_SCAN_DIMENSION) {
+        return SVG_SCAN_DIMENSION / maxDimension;
+    }
+    return Math.max(1, Math.min(8, Math.floor(SVG_SCAN_DIMENSION / maxDimension)));
 }
 
 // 加载 Data URL 图片，并复用统一的 Canvas 像素提取流程。

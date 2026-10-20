@@ -1,15 +1,38 @@
 <script lang="ts" setup>
 import { onMounted } from 'vue';
 import qrcode from 'qrcode-generator';
+import { decodeQrFromImageData, getImageDataFromDataUrl } from '@/services/qrScanner';
+import { useNotify } from '@/composables/useSweetAlert2';
 
 // 设置 qrcode 库使用 UTF-8 编码, 避免汉字乱码问题
 qrcode.stringToBytes = (s: string) => Array.from(new TextEncoder().encode(s));
 
 const QR_TEXT_KEY = 'qrCodeText';
+// SVG 等非 HTML 页面无法使用内容脚本弹窗, 由 background 把图片地址写入该键
+const QR_IMAGE_KEY = 'qrImageUrl';
 
 // 优先使用内存态的 session 存储, 不可用时回退 local
 const storageArea = () => browser.storage.session ?? browser.storage.local;
 const storageAreaName = () => (browser.storage.session ? 'session' : 'local');
+
+const { fire, close, showLoading } = useNotify();
+
+const t = (key: Parameters<typeof browser.i18n.getMessage>[0]) =>
+  browser.i18n.getMessage(key) || String(key);
+
+let scanning = false;
+
+// 读取右键菜单写入的临时图片地址, 读取后立即清除
+async function takeStoredImageUrl(): Promise<string> {
+  const storage = storageArea();
+  const result = await storage.get(QR_IMAGE_KEY);
+  const value = result?.[QR_IMAGE_KEY];
+  if (typeof value === 'string' && value) {
+    await storage.remove(QR_IMAGE_KEY);
+    return value;
+  }
+  return '';
+}
 
 // 读取右键菜单写入的临时文本, 读取后立即清除, 避免污染下次打开
 async function takeStoredText(): Promise<string> {
@@ -34,6 +57,109 @@ async function resolveQrText(): Promise<string> {
   return tab?.url ?? '';
 }
 
+// 读取图片并转换为 Data URL: 优先直接请求(右键菜单已通过 activeTab 授权当前站点),
+// 失败时再交给 background 代理, 以兼容不允许扩展直接访问的地址。
+async function fetchAsDataUrl(url: string): Promise<string> {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return await blobToDataUrl(await response.blob());
+  } catch {
+    return fetchViaBackground(url);
+  }
+}
+
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error ?? new Error('Read failed.'));
+    reader.readAsDataURL(blob);
+  });
+}
+
+function fetchViaBackground(url: string): Promise<string> {
+  return browser.runtime
+    .sendMessage({ action: 'fetchImage', url })
+    .then((response?: { success?: boolean; dataUrl?: string; error?: string }) => {
+      if (response?.success && response.dataUrl) return response.dataUrl;
+      throw new Error(response?.error || t('imageFetchFailed'));
+    });
+}
+
+// 识别图片中的二维码并展示结果, 交互与内容脚本保持一致
+async function scanImage(imageUrl: string) {
+  fire({
+    toast: true,
+    icon: 'info',
+    title: t('decodingQR'),
+    didOpen: () => showLoading(),
+    showCloseButton: true,
+  });
+  await new Promise((resolve) => setTimeout(resolve, 50));
+
+  let result: string | null;
+  try {
+    const dataUrl = await fetchAsDataUrl(imageUrl);
+    const imageData = await getImageDataFromDataUrl(dataUrl);
+    result = decodeQrFromImageData(imageData);
+  } catch (error) {
+    close();
+    fire({
+      toast: true,
+      icon: 'error',
+      title: t('imageFetchFailed'),
+      text: error instanceof Error ? error.message : String(error),
+      showCloseButton: true,
+    });
+    return;
+  }
+
+  close();
+  if (!result) {
+    await fire({
+      toast: false,
+      icon: 'warning',
+      title: t('recognitionFailed'),
+      text: t('recognitionFailedMsg'),
+      confirmButtonText: t('confirm'),
+      showCloseButton: true,
+    });
+    return;
+  }
+
+  const response = await fire({
+    toast: false,
+    icon: 'success',
+    title: t('recognitionSuccess'),
+    text: result,
+    showCancelButton: true,
+    confirmButtonText: t('openLink'),
+    cancelButtonText: t('copyLink'),
+    showCloseButton: true,
+  });
+
+  if (response.isConfirmed) {
+    const url = result.startsWith('http') ? result : `https://${result}`;
+    window.open(url, '_blank');
+    return;
+  }
+  if (response.dismiss === 'cancel') {
+    await navigator.clipboard.writeText(result);
+  }
+}
+
+function startScan(imageUrl: string) {
+  if (scanning) return;
+  scanning = true;
+  // 扫描结果弹窗需要更宽的展示空间, 同时隐藏默认的二维码占位
+  document.documentElement.style.minWidth = '360px';
+  if (document.body) document.body.style.minHeight = '220px';
+  const container = document.getElementById('qrcode-container');
+  if (container) container.style.display = 'none';
+  void scanImage(imageUrl);
+}
+
 let currentText = '';
 
 // 避免重复渲染相同内容
@@ -49,6 +175,13 @@ function onStorageChanged(
   areaName: string,
 ) {
   if (areaName !== storageAreaName()) return;
+  // 非 HTML 页面传入的图片地址优先处理
+  const imageUrl = changes[QR_IMAGE_KEY]?.newValue;
+  if (typeof imageUrl === 'string' && imageUrl) {
+    startScan(imageUrl);
+    void storageArea().remove(QR_IMAGE_KEY);
+    return;
+  }
   const value = changes[QR_TEXT_KEY]?.newValue;
   if (typeof value === 'string' && value) {
     render(value);
@@ -60,6 +193,11 @@ function onStorageChanged(
 onMounted(async () => {
   // 先监听, 再解析, 以覆盖 background 稍后写入的竞态
   browser.storage.onChanged.addListener(onStorageChanged);
+  const imageUrl = await takeStoredImageUrl();
+  if (imageUrl) {
+    startScan(imageUrl);
+    return;
+  }
   render(await resolveQrText());
 });
 
