@@ -93,7 +93,10 @@ async function handleScreenshot() {
         const imageData = await getImageDataFromDataUrl(base64);
         await decodeAndNotify(imageData);
     } catch (error) {
-        const payload = error as { type?: 'warning' | 'error'; message?: string } | null;
+        const payload = error as { type?: 'warning' | 'error'; message?: string; silent?: boolean } | null;
+        if (payload?.silent) {
+            return;
+        }
         if (payload?.type === 'warning') {
             fire({
                 toast: true,
