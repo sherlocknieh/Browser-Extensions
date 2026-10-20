@@ -33,6 +33,12 @@ export default defineBackground(() => {
         openPopup();
     };
 
+    // PDF 查看器等页面无法注入内容脚本, 改为由 popup 截取当前视口后识别
+    const showCaptureScan = () => {
+        void storageArea().set({ qrCaptureScan: true });
+        openPopup();
+    };
+
     // 右键菜单初始化
     const addContextMenus = () => {
         browser.contextMenus.removeAll(() => {
@@ -100,9 +106,12 @@ export default defineBackground(() => {
                 action: "pasteImageQR"
             });
         } else if (info.menuItemId === "screenshotQR") {
-            // 截图识别二维码
+            // 截图识别二维码: 优先使用内容脚本的区域截图
             browser.tabs.sendMessage(tabId, {
                 action: "screenshotQR"
+            }).catch(() => {
+                // PDF 查看器等页面没有内容脚本, 回退到截取当前视口
+                showCaptureScan();
             });
         } else if (info.menuItemId === "generateQR_link") {
             // 链接生成二维码
@@ -129,14 +138,20 @@ export default defineBackground(() => {
     const handleContentScriptMessage = (request: any, _sender: Browser.runtime.MessageSender, sendResponse: (response: any) => void) => {
         // 截取当前标签页可见区域: 由后台调用可避免 getDisplayMedia 的屏幕共享提示条压缩页面视口
         if (request.action === "captureVisibleTab") {
-            const windowId = _sender.tab?.windowId;
-            if (windowId == null) {
-                sendResponse({ success: false });
-                return true;
-            }
-            browser.tabs.captureVisibleTab(windowId, { format: "png" })
+            // 消息可能来自内容脚本(sender.tab), 也可能来自 popup(无 sender.tab)
+            const resolveWindowId = async () => {
+                if (_sender.tab?.windowId != null) return _sender.tab.windowId;
+                const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
+                return tab?.windowId;
+            };
+            resolveWindowId()
+                .then(windowId =>
+                    windowId == null
+                        ? browser.tabs.captureVisibleTab({ format: "png" })
+                        : browser.tabs.captureVisibleTab(windowId, { format: "png" }))
                 .then(dataUrl => sendResponse({ success: true, dataUrl }))
                 .catch(error => sendResponse({ success: false, error: error?.message ?? String(error) }));
+            return true;
         }
         // 跨域获取图片数据
         if (request.action === "fetchImage") {

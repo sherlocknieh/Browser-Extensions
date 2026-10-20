@@ -16,13 +16,20 @@ type LoadImageOptions = {
 // file、data 和 blob 地址需要单独处理，不能简单按普通 URL 判断来源。
 export function isSameOrigin(url: string, origin: string): boolean {
     try {
-        if (url.startsWith('file:')) return false;
         if (url.startsWith('data:') || url.startsWith('blob:')) return true;
+        // 本地页面中的 file 图片直接加载: Firefox 的扩展页面和后台脚本都无法
+        // fetch file: 地址(会报 NetworkError)，但内容脚本可以把图片绘制到 canvas。
+        if (url.startsWith('file:')) return isFileOrigin(origin);
         const resolved = new URL(url, origin);
         return resolved.origin === origin;
     } catch (error) {
         return false;
     }
+}
+
+// file 页面在 Chrome 中的 origin 为 file://，Firefox 中为 null。
+function isFileOrigin(origin: string): boolean {
+    return origin === 'null' || origin === 'file://';
 }
 
 // 从图片 URL 加载像素数据。
