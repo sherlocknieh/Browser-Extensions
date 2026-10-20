@@ -20,8 +20,6 @@ export interface PopupNoticeOptions {
     cancelButtonText?: string;
     // 显示加载动画
     loading?: boolean;
-    // 常驻提示: 不等待用户操作, 等待后续通知替换(如截图框选前的提示)
-    persistent?: boolean;
 }
 
 export interface PopupNoticePayload {

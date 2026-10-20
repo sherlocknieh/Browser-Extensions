@@ -35,8 +35,8 @@ export function usePopupNoticeHost() {
         if (activeId === record.id) return;
         activeId = record.id;
 
-        const { loading, persistent, ...options } = record.options;
-        if (loading || persistent) {
+        const { loading, ...options } = record.options;
+        if (loading) {
             // fire 会被后续结果通知替换; 用户若关闭通知则直接收起 popup
             void fire({
                 ...options,

@@ -1,7 +1,6 @@
 // WXT 后台脚本入口
 import {
     POPUP_NOTICE_KEY,
-    type PopupNoticeOptions,
     type PopupNoticePayload,
     type PopupNoticeRecord,
 } from '@/services/popupNotice';
@@ -19,12 +18,13 @@ export default defineBackground(() => {
     const POPUP_OPEN_GRACE = 1500;
 
     // 打开扩展 popup 窗口
-    // 防止报 browser.pageAction 没有 openPopup 方法的错误(Firefox 的 pageAction 支持 openPopup 方法)
-    // Firefox 只允许在用户操作(如右键菜单点击)期间调用 openPopup, 异步流程中再调用会被拒绝
+    // 必须优先用 action.openPopup: Firefox 的 pageAction.openPopup 只允许在用户操作期间调用,
+    // 异步流程(如截图框选完成)中调用会被拒绝; action.openPopup 则没有这个限制
     const openPopup = () => {
         type OpenPopupCapable = { openPopup: () => Promise<void> };
-        // 优先地址栏 page_action, 其次工具栏 action
-        const action = browser.pageAction as unknown as OpenPopupCapable || browser.action;
+        const action = (browser.action as unknown as OpenPopupCapable | undefined)
+            ?? (browser.pageAction as unknown as OpenPopupCapable | undefined);
+        if (!action?.openPopup) return Promise.reject(new Error('openPopup is unavailable'));
         return action.openPopup().then(() => {
             lastPopupOpenAt = Date.now();
         });
@@ -36,21 +36,6 @@ export default defineBackground(() => {
         const stored = await storageArea().get(POPUP_NOTICE_KEY);
         const current = stored?.[POPUP_NOTICE_KEY] as PopupNoticeRecord | undefined;
         if (current?.id === id) await storageArea().remove(POPUP_NOTICE_KEY);
-    };
-
-    // 在用户操作期间先打开 popup 并显示一条常驻提示,
-    // 之后内容脚本产生的通知就能直接推送到已打开的 popup(Firefox 不支持异步打开)
-    const openPopupWithNotice = (options: PopupNoticeOptions) => {
-        const record: PopupNoticeRecord = { id: ++noticeSeq, options };
-        void storageArea().set({ [POPUP_NOTICE_KEY]: record });
-        popupOpening = true;
-        void openPopup()
-            .catch(() => {
-                void clearNoticeIfCurrent(record.id);
-            })
-            .finally(() => {
-                popupOpening = false;
-            });
     };
 
     // 返回 false 表示当前无法显示 popup, 内容脚本将回退到页面内通知
@@ -164,20 +149,10 @@ export default defineBackground(() => {
             // 选中文字生成二维码
             showQRcode(info.selectionText);
         } else if (info.menuItemId === "decodeQR") {
-            // 页面图片二维码识别: 先在用户操作期间打开 popup, 后续通知才能显示在 popup 里
-            openPopupWithNotice({
-                toast: true,
-                icon: 'info',
-                title: browser.i18n.getMessage('decodingQR') || '正在识别二维码…',
-                showCloseButton: true,
-                loading: true,
-            });
+            // 页面图片二维码识别, 识别过程的提示统一由 popup 显示
             browser.tabs.sendMessage(tabId, {
                 action: "decodeQR",
                 imageUrl: info.srcUrl
-            }).catch(() => {
-                // 没有内容脚本时无法识别, 直接收起加载提示
-                void storageArea().remove(POPUP_NOTICE_KEY);
             });   // 此URL是包含域名的完整URL, 无论图片是否用了相对路径
         } else if (info.menuItemId === "decodeQRPage") {
             // 直接打开的 SVG 是 XML 文档, 内容脚本无法创建 canvas 和弹窗, 交给 popup 处理
@@ -188,15 +163,7 @@ export default defineBackground(() => {
                 action: "pasteImageQR"
             });
         } else if (info.menuItemId === "screenshotQR") {
-            // 截图识别二维码: 同样需要先在用户操作期间打开 popup,
-            // 此时只是提示框选区域, 不要提前显示识别中的加载状态
-            openPopupWithNotice({
-                toast: true,
-                icon: 'info',
-                title: browser.i18n.getMessage('screenshotSelectRegion') || '请在页面上框选要识别的二维码区域',
-                showCloseButton: true,
-                persistent: true,
-            });
+            // 截图识别二维码: 优先使用内容脚本的区域截图
             browser.tabs.sendMessage(tabId, {
                 action: "screenshotQR"
             }).catch(() => {

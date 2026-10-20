@@ -87,10 +87,6 @@
     "message": "截图已取消",
     "description": "用户取消截图或浏览器不支持的提示标题"
   },
-  "screenshotSelectRegion": {
-    "message": "请在页面上框选要识别的二维码区域",
-    "description": "截图开始前在 popup 中的提示"
-  },
   "screenshotCancelledMsg": {
     "message": "截图操作已取消。",
     "description": "用户取消截图时的提示信息"
