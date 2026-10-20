@@ -369,8 +369,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
 
 .qr-notify-modal-close {
     position: absolute;
-    top: 10px;
-    right: 10px;
+    top: 4px;
+    right: 4px;
     width: 28px;
     height: 28px;
 }

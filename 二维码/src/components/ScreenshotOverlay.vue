@@ -20,7 +20,7 @@ const MIN_SELECTION = 8;
 const HANDLE_SIZE = 6;
 const HANDLE_HIT_SIZE = 9;
 const LAYOUT_PADDING = 8;
-const MASK_COLOR = 'rgba(0, 0, 0, 0.6)';
+const MASK_COLOR = 'rgba(0, 0, 0, 0.4)';
 const ACCENT_COLOR = '#2CABFF';
 
 type Rect = { x: number; y: number; width: number; height: number };
