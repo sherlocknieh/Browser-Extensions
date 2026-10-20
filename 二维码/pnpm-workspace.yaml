@@ -6,3 +6,5 @@ minimumReleaseAgeExclude:
   - '@vue/reactivity@3.5.44'
   - '@vue/runtime-core@3.5.44'
   - '@vue/shared@3.5.44'
+patchedDependencies:
+  web-ext: patches/web-ext.patch

@@ -61,9 +61,6 @@ export default defineBackground(() => {
         if (tabId == null) {
             console.warn('tabId is null');  // tabId 不存在则警告并返回
             return;
-        } else if (info.menuItemId === "generateQR_link") {
-            // 链接生成二维码
-            showQRcode(info.linkUrl);
         } else if (info.menuItemId === "generateQR_selection") {
             // 选中文字生成二维码
             showQRcode(info.selectionText);
@@ -83,6 +80,9 @@ export default defineBackground(() => {
             browser.tabs.sendMessage(tabId, {
                 action: "screenshotQR"
             });
+        } else if (info.menuItemId === "generateQR_link") {
+            // 链接生成二维码
+            showQRcode(info.linkUrl);
         }
     };
 

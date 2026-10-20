@@ -147,7 +147,16 @@ async function handleScreenshot() {
     } catch (error) {
         if (isScreenshotResult(error)) {
             notifyScreenshotResult(error);
+            return;
         }
+        const message = error instanceof Error ? error.message : String(error);
+        fire({
+            toast: true,
+            icon: 'error',
+            title: t('screenshotFailed'),
+            text: message || t('screenshotFailedMsg'),
+            showCloseButton: true,
+        });
     }
 }
 
