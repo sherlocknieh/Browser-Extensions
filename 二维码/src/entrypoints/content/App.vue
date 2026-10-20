@@ -197,14 +197,3 @@ function fetchImageViaProxy(url: string): Promise<string> {
         <PasteImageDialog v-if="isPasteDialogOpen" @close="isPasteDialogOpen = false" />
     </div>
 </template>
-
-<style>
-#screenShotContainer {
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 9999 !important;
-    position: fixed !important;
-}
-</style>
