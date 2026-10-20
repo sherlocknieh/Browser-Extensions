@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { onMounted, ref } from 'vue';
+import { nextTick, onMounted, ref } from 'vue';
 import qrcode from 'qrcode-generator';
 import { decodeQrFromImageData, getImageDataFromDataUrl } from '@/services/qrScanner';
 import { isLinkText, toOpenableUrl } from '@/services/linkText';
@@ -233,7 +233,8 @@ function render(text: string) {
   if (!text || text === currentText) return;
   currentText = text;
   hasQrContent.value = true;
-  generateQRCode(text);
+  // 容器由 hasQrContent 控制, 需等渲染完成后再写入二维码
+  void nextTick(() => generateQRCode(text));
 }
 
 // background 在用户手势中同步打开 popup, 临时文本可能稍后才写入, 需监听变更刷新
