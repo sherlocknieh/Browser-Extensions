@@ -112,18 +112,6 @@ function notifyScreenshotResult(result: ScreenshotResult) {
         });
         return;
     }
-
-    if (result.type === 'webRtcFailed') {
-        fire({
-            toast: true,
-            icon: 'info',
-            title: t('screenshotWebRtcFailed'),
-            text: t('screenshotWebRtcFailedMsg'),
-            showCloseButton: true,
-        });
-        return;
-    }
-
 }
 
 function isScreenshotResult(error: unknown): error is ScreenshotResult {
@@ -133,8 +121,7 @@ function isScreenshotResult(error: unknown): error is ScreenshotResult {
         'type' in error &&
         (
             error.type === 'failed' ||
-            error.type === 'cancelled' ||
-            error.type === 'webRtcFailed'
+            error.type === 'cancelled'
         )
     );
 }

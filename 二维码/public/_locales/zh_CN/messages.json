@@ -19,6 +19,10 @@
     "message": "识别图中的二维码",
     "description": "右键菜单项：识别图片中的二维码"
   },
+  "decodeQRSvg": {
+    "message": "识别 SVG 二维码",
+    "description": "右键菜单项：识别直接打开的 SVG 文档中的二维码"
+  },
   "screenShot": {
     "message": "截图识别二维码",
     "description": "右键菜单项：截图识别二维码"
@@ -68,7 +72,7 @@
     "description": "截图操作失败的提示标题"
   },
   "screenshotFailedMsg": {
-    "message": "无法启动屏幕截图，请确认网页已加载完成、浏览器窗口未最小化并允许屏幕共享，然后重试。",
+    "message": "无法完成截图，请确认当前页面是普通网页后重试。",
     "description": "截图失败的提示信息"
   },
   "screenshotCancelled": {
@@ -76,16 +80,20 @@
     "description": "用户取消截图或浏览器不支持的提示标题"
   },
   "screenshotCancelledMsg": {
-    "message": "你已取消屏幕共享，截图操作未完成。",
-    "description": "用户取消屏幕共享时的提示信息"
+    "message": "截图操作已取消。",
+    "description": "用户取消截图时的提示信息"
   },
-  "screenshotWebRtcFailed": {
-    "message": "调起 WebRTC 失败",
-    "description": "无法启动 WebRTC 屏幕捕获时的提示标题"
+  "screenshotSelectAll": {
+    "message": "全选",
+    "description": "选择整个截图区域的按钮"
   },
-  "screenshotWebRtcFailedMsg": {
-    "message": "请等待网页加载完成并保持浏览器窗口可见；如果仍然失败，请刷新页面，等待加载完成后再重试。",
-    "description": "无法启动 WebRTC 屏幕捕获时的提示信息"
+  "screenshotCancel": {
+    "message": "取消",
+    "description": "取消截图按钮"
+  },
+  "screenshotConfirm": {
+    "message": "识别",
+    "description": "确认选区并识别二维码的按钮"
   },
   "confirm": {
     "message": "确定",

@@ -27,7 +27,6 @@
 - 跨浏览器开发: wxt, vue3
 - 二维码识别: jsQR
 - 二维码生成: qrcode-generator
-- 网页截图: js-web-screen-shot
 - 弹窗提示: sweetalert2
 
 # 发布

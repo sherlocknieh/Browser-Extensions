@@ -19,6 +19,10 @@
     "message": "Scan QR Code in This Image",
     "description": "Context menu item for recognizing QR code in image"
   },
+  "decodeQRSvg": {
+    "message": "Scan QR Code in This SVG Page",
+    "description": "Context menu item for recognizing QR code in an SVG document opened directly"
+  },
   "screenShot": {
     "message": "Take a Screenshot to Scan QR Code",
     "description": "Context menu item for taking screenshot to recognize QR code"
@@ -68,7 +72,7 @@
     "description": "Error title for screenshot operation failure"
   },
   "screenshotFailedMsg": {
-    "message": "Screen capture could not be started. Make sure the page has finished loading, the browser window is not minimized, and screen sharing is allowed, then try again.",
+    "message": "The screenshot could not be captured. Make sure the page is a normal web page and try again.",
     "description": "Message shown when screenshot startup fails"
   },
   "screenshotCancelled": {
@@ -76,16 +80,20 @@
     "description": "Title for user cancel or browser not supported"
   },
   "screenshotCancelledMsg": {
-    "message": "Screen sharing was cancelled, so the screenshot was not completed.",
-    "description": "Message shown when screen sharing is cancelled"
+    "message": "The screenshot was cancelled.",
+    "description": "Message shown when the screenshot is cancelled"
   },
-  "screenshotWebRtcFailed": {
-    "message": "Failed to start WebRTC",
-    "description": "Title shown when WebRTC screen capture cannot start"
+  "screenshotSelectAll": {
+    "message": "Select all",
+    "description": "Button that selects the whole screenshot area"
   },
-  "screenshotWebRtcFailedMsg": {
-    "message": "Wait for the page to finish loading and keep the browser window visible. If it still fails, refresh the page, wait for it to finish loading, and try again.",
-    "description": "Message shown when WebRTC screen capture cannot start"
+  "screenshotCancel": {
+    "message": "Cancel",
+    "description": "Button that cancels the screenshot"
+  },
+  "screenshotConfirm": {
+    "message": "Scan",
+    "description": "Button that confirms the selected area for QR decoding"
   },
   "confirm": {
     "message": "OK",

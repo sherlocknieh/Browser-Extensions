@@ -15,7 +15,6 @@
     "postinstall": "wxt prepare"
   },
   "dependencies": {
-    "js-web-screen-shot": "1.9.9-rc.29",
     "jsqr": "^1.4.0",
     "qrcode-generator": "^2.0.4",
     "sweetalert2": "^11.26.18",

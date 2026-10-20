@@ -1,6 +1,18 @@
 // WXT 后台脚本入口
 export default defineBackground(() => {
 
+    // 优先使用内存态的 session 存储, 不可用时回退 local
+    const storageArea = () => browser.storage.session ?? browser.storage.local;
+
+    // 打开扩展 popup 窗口
+    // 防止报 browser.pageAction 没有 openPopup 方法的错误(Firefox 的 pageAction 支持 openPopup 方法)
+    const openPopup = () => {
+        type OpenPopupCapable = { openPopup: () => Promise<void> };
+        // 优先地址栏 page_action, 其次工具栏 action
+        const action = browser.pageAction as unknown as OpenPopupCapable || browser.action;
+        action.openPopup();
+    };
+
     // 生成并显示二维码
     const showQRcode = (text?: string) => {
         // 过滤空文本
@@ -8,15 +20,17 @@ export default defineBackground(() => {
         if (!value) return;
 
         // 文本储存到本地
-        const storage = browser.storage.session ?? browser.storage.local;
-        void storage.set({ qrCodeText: value });
+        void storageArea().set({ qrCodeText: value });
+        // 打开 popup 窗口, 由 popup 生成二维码
+        openPopup();
+    };
 
-        // 防止报 browser.pageAction 没有 openPopup 方法的错误(Firefox 的 pageAction 支持 openPopup 方法)
-        type OpenPopupCapable = { openPopup: () => Promise<void> };
-        // 优先地址栏 page_action, 其次工具栏 action
-        const action = browser.pageAction as unknown as OpenPopupCapable || browser.action;
-        // 打开 popup 窗口
-        action.openPopup();
+    // 在 SVG 文档等非 HTML 页面中, 内容脚本无法创建 canvas/popup 所需的 DOM,
+    // 因此把图片地址交给 popup, 由扩展页面完成下载和识别。
+    const showQrFromImagePage = (imageUrl?: string) => {
+        if (!imageUrl) return;
+        void storageArea().set({ qrImageUrl: imageUrl });
+        openPopup();
     };
 
     // 右键菜单初始化
@@ -27,6 +41,13 @@ export default defineBackground(() => {
                 id: "decodeQR",
                 title: browser.i18n.getMessage("decodeQR"),
                 contexts: ["image"]
+            });
+            // 添加菜单: 识别图中二维码 (直接打开的 SVG 是文档而非 <img>, 右键上下文为 page)
+            browser.contextMenus.create({
+                id: "decodeQRPage",
+                title: browser.i18n.getMessage("decodeQRSvg"),
+                contexts: ["page"],
+                documentUrlPatterns: ["*://*/*.svg*", "file:///*.svg*"]
             });
             // 添加菜单: 选中文字生成二维码
             browser.contextMenus.create({
@@ -70,6 +91,9 @@ export default defineBackground(() => {
                 action: "decodeQR",
                 imageUrl: info.srcUrl
             });   // 此URL是包含域名的完整URL, 无论图片是否用了相对路径
+        } else if (info.menuItemId === "decodeQRPage") {
+            // 直接打开的 SVG 是 XML 文档, 内容脚本无法创建 canvas 和弹窗, 交给 popup 处理
+            showQrFromImagePage(info.pageUrl ?? tab?.url);
         } else if (info.menuItemId === "pasteImageQR") {
             // 粘贴图片识别二维码
             browser.tabs.sendMessage(tabId, {
@@ -103,6 +127,17 @@ export default defineBackground(() => {
 
     // 内容脚本消息处理
     const handleContentScriptMessage = (request: any, _sender: Browser.runtime.MessageSender, sendResponse: (response: any) => void) => {
+        // 截取当前标签页可见区域: 由后台调用可避免 getDisplayMedia 的屏幕共享提示条压缩页面视口
+        if (request.action === "captureVisibleTab") {
+            const windowId = _sender.tab?.windowId;
+            if (windowId == null) {
+                sendResponse({ success: false });
+                return true;
+            }
+            browser.tabs.captureVisibleTab(windowId, { format: "png" })
+                .then(dataUrl => sendResponse({ success: true, dataUrl }))
+                .catch(error => sendResponse({ success: false, error: error?.message ?? String(error) }));
+        }
         // 跨域获取图片数据
         if (request.action === "fetchImage") {
             fetch(request.url)                       // 请求图片资源
