@@ -87,6 +87,10 @@
     "message": "Screenshot cancelled",
     "description": "Title for user cancel or browser not supported"
   },
+  "screenshotSelectRegion": {
+    "message": "Drag on the page to select the QR code area",
+    "description": "Hint in the popup before screenshot selection starts"
+  },
   "screenshotCancelledMsg": {
     "message": "The screenshot was cancelled.",
     "description": "Message shown when the screenshot is cancelled"

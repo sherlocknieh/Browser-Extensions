@@ -1,5 +1,10 @@
 // WXT 后台脚本入口
-import { POPUP_NOTICE_KEY, type PopupNoticePayload, type PopupNoticeRecord } from '@/services/popupNotice';
+import {
+    POPUP_NOTICE_KEY,
+    type PopupNoticeOptions,
+    type PopupNoticePayload,
+    type PopupNoticeRecord,
+} from '@/services/popupNotice';
 
 export default defineBackground(() => {
 
@@ -33,19 +38,10 @@ export default defineBackground(() => {
         if (current?.id === id) await storageArea().remove(POPUP_NOTICE_KEY);
     };
 
-    // 在用户操作期间先打开 popup 并显示加载通知,
+    // 在用户操作期间先打开 popup 并显示一条常驻提示,
     // 之后内容脚本产生的通知就能直接推送到已打开的 popup(Firefox 不支持异步打开)
-    const openPopupWithLoadingNotice = () => {
-        const record: PopupNoticeRecord = {
-            id: ++noticeSeq,
-            options: {
-                toast: true,
-                icon: 'info',
-                title: browser.i18n.getMessage('decodingQR') || '正在识别二维码…',
-                showCloseButton: true,
-                loading: true,
-            },
-        };
+    const openPopupWithNotice = (options: PopupNoticeOptions) => {
+        const record: PopupNoticeRecord = { id: ++noticeSeq, options };
         void storageArea().set({ [POPUP_NOTICE_KEY]: record });
         popupOpening = true;
         void openPopup()
@@ -169,7 +165,13 @@ export default defineBackground(() => {
             showQRcode(info.selectionText);
         } else if (info.menuItemId === "decodeQR") {
             // 页面图片二维码识别: 先在用户操作期间打开 popup, 后续通知才能显示在 popup 里
-            openPopupWithLoadingNotice();
+            openPopupWithNotice({
+                toast: true,
+                icon: 'info',
+                title: browser.i18n.getMessage('decodingQR') || '正在识别二维码…',
+                showCloseButton: true,
+                loading: true,
+            });
             browser.tabs.sendMessage(tabId, {
                 action: "decodeQR",
                 imageUrl: info.srcUrl
@@ -186,8 +188,15 @@ export default defineBackground(() => {
                 action: "pasteImageQR"
             });
         } else if (info.menuItemId === "screenshotQR") {
-            // 截图识别二维码: 同样需要先在用户操作期间打开 popup
-            openPopupWithLoadingNotice();
+            // 截图识别二维码: 同样需要先在用户操作期间打开 popup,
+            // 此时只是提示框选区域, 不要提前显示识别中的加载状态
+            openPopupWithNotice({
+                toast: true,
+                icon: 'info',
+                title: browser.i18n.getMessage('screenshotSelectRegion') || '请在页面上框选要识别的二维码区域',
+                showCloseButton: true,
+                persistent: true,
+            });
             browser.tabs.sendMessage(tabId, {
                 action: "screenshotQR"
             }).catch(() => {
