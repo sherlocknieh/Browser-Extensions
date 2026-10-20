@@ -5,6 +5,7 @@ import App from './App.vue';
 export default defineContentScript({
     matches: ['<all_urls>'],    // [必填项] 匹配所有网址
     matchAboutBlank: true,      // 允许匹配 about:blank 页面
+    runAt: 'document_idle',
     cssInjectionMode: 'manifest',     // CSS 注入到 manifest 中
 
     // 内容脚本的主函数，接收一个上下文对象 ctx
@@ -12,7 +13,7 @@ export default defineContentScript({
     main(ctx) {
         // 创建并挂载 UI 组件
         const ui = createIntegratedUi(ctx, {
-            anchor: 'body',     // <wxt-vue-ui> 元素将被挂载到 <body> 上
+            anchor: document.documentElement, // 图片文档的 body 由浏览器特殊管理，挂载到 html 更稳定
             append: 'last',     // <wxt-vue-ui> 将被添加到 <body> 的末尾
             position: 'overlay',// 挂载模式（overlay=脱离文档流，inline=嵌入文档流, modal=带覆盖层的弹窗）
             onMount: (container) => {

@@ -87,9 +87,25 @@
     "message": "Screenshot failed",
     "description": "Error title for screenshot operation failure"
   },
+  "screenshotFailedMsg": {
+    "message": "Screen capture could not be started. Make sure the page has finished loading, the browser window is not minimized, and screen sharing is allowed, then try again.",
+    "description": "Message shown when screenshot startup fails"
+  },
   "screenshotCancelled": {
     "message": "Screenshot cancelled",
     "description": "Title for user cancel or browser not supported"
+  },
+  "screenshotCancelledMsg": {
+    "message": "Screen sharing was cancelled, so the screenshot was not completed.",
+    "description": "Message shown when screen sharing is cancelled"
+  },
+  "screenshotWebRtcFailed": {
+    "message": "Failed to start WebRTC",
+    "description": "Title shown when WebRTC screen capture cannot start"
+  },
+  "screenshotWebRtcFailedMsg": {
+    "message": "Wait for the page to finish loading and keep the browser window visible. If it still fails, refresh the page, wait for it to finish loading, and try again.",
+    "description": "Message shown when WebRTC screen capture cannot start"
   },
   "confirm": {
     "message": "OK",

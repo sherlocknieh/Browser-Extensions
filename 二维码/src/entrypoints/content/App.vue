@@ -12,7 +12,7 @@ import {
 // UI组件
 import PasteImageDialog from '@/components/PasteImageDialog.vue';
 import { useNotify } from '@/composables/useSweetAlert2';
-import { useScreenshot } from '@/composables/useScreenshot';
+import { useScreenshot, type ScreenshotResult } from '@/composables/useScreenshot';
 
 
 
@@ -87,42 +87,67 @@ async function handleImageUrl(imageUrl: string) {
 }
 
 // 截图识别流程
+function notifyScreenshotResult(result: ScreenshotResult) {
+    if (result.type === 'cancelled') {
+        if (result.silent) {
+            return;
+        }
+        fire({
+            toast: true,
+            icon: 'error',
+            title: t('screenshotCancelled'),
+            text: t('screenshotCancelledMsg'),
+            showCloseButton: true,
+        });
+        return;
+    }
+
+    if (result.type === 'failed') {
+        fire({
+            toast: true,
+            icon: 'warning',
+            title: t('screenshotFailed'),
+            text: t('screenshotFailedMsg'),
+            showCloseButton: true,
+        });
+        return;
+    }
+
+    if (result.type === 'webRtcFailed') {
+        fire({
+            toast: true,
+            icon: 'info',
+            title: t('screenshotWebRtcFailed'),
+            text: t('screenshotWebRtcFailedMsg'),
+            showCloseButton: true,
+        });
+        return;
+    }
+
+}
+
+function isScreenshotResult(error: unknown): error is ScreenshotResult {
+    return (
+        typeof error === 'object' &&
+        error !== null &&
+        'type' in error &&
+        (
+            error.type === 'failed' ||
+            error.type === 'cancelled' ||
+            error.type === 'webRtcFailed'
+        )
+    );
+}
+
 async function handleScreenshot() {
     try {
         const base64 = await startScreenshot();
         const imageData = await getImageDataFromDataUrl(base64);
         await decodeAndNotify(imageData);
     } catch (error) {
-        const payload = error as { type?: 'warning' | 'error'; message?: string; silent?: boolean } | null;
-        if (payload?.silent) {
-            return;
+        if (isScreenshotResult(error)) {
+            notifyScreenshotResult(error);
         }
-        if (payload?.type === 'warning') {
-            fire({
-                toast: true,
-                icon: 'warning',
-                title: t('screenshotFailed'),
-                text: payload.message,
-                showCloseButton: true,
-            });
-            return;
-        }
-        if (payload?.type === 'error') {
-            fire({
-                toast: true,
-                icon: 'error',
-                title: t('screenshotCancelled'),
-                text: payload.message,
-                showCloseButton: true,
-            });
-            return;
-        }
-        fire({
-            toast: true,
-            icon: 'error',
-            title: t('screenshotFailed'),
-            showCloseButton: true,
-        });
     }
 }
 
