@@ -7,10 +7,6 @@
     "message": "QR codes generator and recognizer",
     "description": "Application description"
   },
-  "generateQR_page": {
-    "message": "QR Code for This Page",
-    "description": "Context menu item for generating QR code from current page"
-  },
   "generateQR_link": {
     "message": "QR Code for This Link",
     "description": "Context menu item for generating QR code from current link"
@@ -51,17 +47,9 @@
     "message": "Couldn't load image",
     "description": "Error dialog title for image loading failure"
   },
-  "unableLoadImageData": {
-    "message": "Can't read the image data",
-    "description": "Error message for image loading failure"
-  },
   "error": {
     "message": "Error",
     "description": "Generic error title"
-  },
-  "imageFetchError": {
-    "message": "Image fetch failed: ",
-    "description": "Error message for image fetch failure"
   },
   "imageLoadFailed": {
     "message": "Image load failed",
@@ -74,14 +62,6 @@
   "proxyFetchFailed": {
     "message": "Proxy fetch failed",
     "description": "Error when background proxy fetch fails"
-  },
-  "featureInDevTitle": {
-    "message": "Feature in progress",
-    "description": "Title for not-yet-implemented feature"
-  },
-  "featureInDevDesc": {
-    "message": "Screenshot QR scanning is in progress—stay tuned!",
-    "description": "Description for not-yet-implemented feature"
   },
   "screenshotFailed": {
     "message": "Screenshot failed",

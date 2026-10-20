@@ -7,10 +7,6 @@
     "message": "二维码生成和识别",
     "description": "应用描述"
   },
-  "generateQR_page": {
-    "message": "为当前页面生成二维码",
-    "description": "右键菜单项：从当前页面生成二维码"
-  },
   "generateQR_link": {
     "message": "为此链接生成二维码",
     "description": "右键菜单项：从链接生成二维码"
@@ -51,17 +47,9 @@
     "message": "图片加载失败",
     "description": "图片加载失败错误标题"
   },
-  "unableLoadImageData": {
-    "message": "无法加载图片数据",
-    "description": "图片加载失败错误信息"
-  },
   "error": {
     "message": "错误",
     "description": "通用错误标题"
-  },
-  "imageFetchError": {
-    "message": "图片获取失败: ",
-    "description": "图片获取失败的错误信息"
   },
   "imageLoadFailed": {
     "message": "图片加载失败",
@@ -74,14 +62,6 @@
   "proxyFetchFailed": {
     "message": "代理获取失败",
     "description": "后台代理获取失败时的提示"
-  },
-  "featureInDevTitle": {
-    "message": "功能开发中",
-    "description": "未完成功能的提示标题"
-  },
-  "featureInDevDesc": {
-    "message": "截图识别二维码功能正在开发，敬请期待！",
-    "description": "未完成功能的提示描述"
   },
   "screenshotFailed": {
     "message": "截图失败",
