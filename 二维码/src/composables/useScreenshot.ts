@@ -66,6 +66,7 @@ ${SCREENSHOT_ELEMENT_SELECTOR} {
 }
 
 #screenShotContainer {
+    position: fixed !important;
     border: 1px solid rgba(255, 255, 255, 0.7) !important;
     border-radius: 12px !important;
     box-shadow:
@@ -74,15 +75,8 @@ ${SCREENSHOT_ELEMENT_SELECTOR} {
     animation: ${ready ? 'qr-screenshot-window-enter 220ms ease-out both' : 'none'};
 }
 
-${SCREENSHOT_ELEMENT_SELECTOR} {
-    z-index: 2147483647 !important;
-    border: 1px solid rgba(0, 0, 0, 0.18) !important;
-    border-radius: 8px !important;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28) !important;
-}
-
 #${SCREENSHOT_CLOSE_BUTTON_ID} {
-    position: absolute;
+    position: fixed;
     width: 30px;
     height: 30px;
     padding: 0;
@@ -118,8 +112,8 @@ function getFloatingCanvasConfig() {
         canvasWidth,
         canvasHeight,
         position: {
-            left: Math.floor(window.scrollX + (viewportWidth - canvasWidth) / 2),
-            top: Math.floor(window.scrollY + (viewportHeight - canvasHeight) / 2),
+            left: Math.floor((viewportWidth - canvasWidth) / 2),
+            top: Math.floor((viewportHeight - canvasHeight) / 2),
         },
     };
 }
@@ -157,6 +151,8 @@ export function useScreenshot() {
             let closeButton: HTMLButtonElement | undefined;
             let silentlyClosing = false;
             let captureStarted = false;
+            let resizeFrame: number | undefined;
+            let positionedElements: HTMLElement[] = [];
             let visibilityInterrupted = document.visibilityState !== 'visible';
             const handleVisibilityChange = () => {
                 if (document.visibilityState !== 'visible') {
@@ -170,6 +166,11 @@ export function useScreenshot() {
                     return;
                 }
                 cleanedUp = true;
+                window.removeEventListener('resize', handleResize);
+                if (resizeFrame !== undefined) {
+                    window.cancelAnimationFrame(resizeFrame);
+                    resizeFrame = undefined;
+                }
                 if (outsideClick) {
                     document.removeEventListener('pointerdown', outsideClick, true);
                     outsideClick = undefined;
@@ -177,8 +178,59 @@ export function useScreenshot() {
                 document.removeEventListener('visibilitychange', handleVisibilityChange);
                 closeButton?.remove();
                 document.getElementById(SCREENSHOT_CLOSE_BUTTON_ID)?.remove();
+                positionedElements = [];
                 closeButton = undefined;
                 screenshotStyles.remove();
+            };
+
+            const updateScreenshotPosition = () => {
+                const container = document.getElementById('screenShotContainer');
+                if (!(container instanceof HTMLElement)) {
+                    return;
+                }
+
+                const containerRect = container.getBoundingClientRect();
+                const viewportWidth = Math.max(window.innerWidth, 1);
+                const viewportHeight = Math.max(window.innerHeight, 1);
+                const offsetX = Math.max(0, (viewportWidth - containerRect.width) / 2);
+                const offsetY = Math.max(0, (viewportHeight - containerRect.height) / 2);
+                const left = Math.floor(offsetX);
+                const top = Math.floor(offsetY);
+                const deltaX = left - containerRect.left;
+                const deltaY = top - containerRect.top;
+
+                if (deltaX === 0 && deltaY === 0) {
+                    return;
+                }
+                container.style.left = `${left}px`;
+                container.style.top = `${top}px`;
+                positionedElements.forEach((element) => {
+                    if (element === container) {
+                        return;
+                    }
+                    const elementRect = element.getBoundingClientRect();
+                    element.style.left = `${Math.round(elementRect.left + deltaX)}px`;
+                    element.style.top = `${Math.round(elementRect.top + deltaY)}px`;
+                });
+            };
+
+            const collectPositionedElements = () => {
+                const allElements = Array.from(
+                    document.querySelectorAll<HTMLElement>(SCREENSHOT_ELEMENT_SELECTOR),
+                );
+                positionedElements = allElements.filter(
+                    (element) => !allElements.some((parent) => parent !== element && parent.contains(element)),
+                );
+            };
+
+            const handleResize = () => {
+                if (resizeFrame !== undefined) {
+                    return;
+                }
+                resizeFrame = window.requestAnimationFrame(() => {
+                    resizeFrame = undefined;
+                    updateScreenshotPosition();
+                });
             };
 
             const startScreenshotCapture = () => {
@@ -198,6 +250,7 @@ export function useScreenshot() {
                     if (response.code === 0) {
                         captureStarted = true;
                         screenshotStyles.show();
+                        window.addEventListener('resize', handleResize);
                         const cancelFromOutside = () => {
                             cleanup();
                             screenshot?.destroyComponents();
@@ -221,6 +274,8 @@ export function useScreenshot() {
                         });
                         closeButton.addEventListener('click', closeSilently);
                         document.body.appendChild(closeButton);
+                        collectPositionedElements();
+                        updateScreenshotPosition();
                         outsideClick = (event) => {
                             const target = event.target;
                             if (target instanceof Element && target.closest(SCREENSHOT_ELEMENT_SELECTOR)) {
