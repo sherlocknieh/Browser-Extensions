@@ -15,12 +15,12 @@
 
 - [x] 支持彩色二维码, 圆点二维码, SVG 图片二维
 - [x] 给 Firefox 地址栏图标添加右键菜单
+- [x] 优化截图识别的体验
 
 ## TODO
 
 - [ ] 支持倾斜变形二维码识别
 - [ ] 支持识别一个图片中的多个二维码
-- [ ] 优化截图识别的体验
 
 ## 用到的库
 
@@ -37,8 +37,15 @@
 ```bash
 # 配置密钥
 pnpm wxt submit init
-# 测试密钥
-pnpm wxt submit --dry-run
-# 提交新版本
-pnpm wxt submit
+
+# 构建并提交到单个商店
+pnpm submit:chrome
+pnpm submit:edge
+pnpm submit:firefox
+
+# 仅测试密钥
+pnpm submit:chrome --dry-run
 ```
+
+> `wxt submit` 需要显式传入要上传的 ZIP 文件，否则会报
+> `No ZIP files detected to upload`。上面的 `submit:*` 脚本会先构建 ZIP 再提交。

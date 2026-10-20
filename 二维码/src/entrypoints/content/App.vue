@@ -176,6 +176,7 @@ async function decodeAndNotify(imageData: ImageData) {
 
     // 调用二维码识别函数，获取识别结果
     const result = decodeQrFromImageData(imageData);
+    
     close();// 关闭正在识别的通知
 
     if (result) {

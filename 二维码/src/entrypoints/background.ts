@@ -28,12 +28,6 @@ export default defineBackground(() => {
                 title: browser.i18n.getMessage("decodeQR"),
                 contexts: ["image"]
             });
-            // 添加菜单: 链接生成二维码
-            browser.contextMenus.create({
-                id: "generateQR_link",
-                title: browser.i18n.getMessage("generateQR_link"),
-                contexts: ["link"]
-            });
             // 添加菜单: 选中文字生成二维码
             browser.contextMenus.create({
                 id: "generateQR_selection",
@@ -51,6 +45,12 @@ export default defineBackground(() => {
                 id: "screenshotQR",
                 title: browser.i18n.getMessage("screenShot"),
                 contexts: ["action", "image", "page_action"]
+            });
+            // 添加菜单: 链接生成二维码
+            browser.contextMenus.create({
+                id: "generateQR_link",
+                title: browser.i18n.getMessage("generateQR_link"),
+                contexts: ["link"]
             });
         });
     };
