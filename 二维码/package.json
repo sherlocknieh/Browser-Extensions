@@ -8,9 +8,10 @@
     "dev:firefox": "wxt -b firefox --mv3",
     "zip": "wxt zip",
     "zip:firefox": "wxt zip -b firefox --mv3",
-    "submit:firefox": "wxt zip -b firefox --mv3 && wxt submit --firefox-zip .output/*-firefox.zip --firefox-sources-zip .output/*-sources.zip",
-    "submit:edge": "wxt zip && wxt submit --edge-zip .output/*-chrome.zip",
-    "submit:chrome": "wxt zip && wxt submit --chrome-zip .output/*-chrome.zip",
+    "submit:firefox": "node scripts/submit.mjs firefox",
+    "submit:edge": "node scripts/submit.mjs edge",
+    "submit:chrome": "node scripts/submit.mjs chrome",
+    "submit": "node scripts/submit.mjs all",
     "compile": "vue-tsc --noEmit",
     "postinstall": "wxt prepare"
   },

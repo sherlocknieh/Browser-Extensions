@@ -28,6 +28,7 @@
 - 二维码识别: jsQR
 - 二维码生成: qrcode-generator
 - 弹窗提示: 自研通知组件
+- 网页截图: 自研截图组件
 
 # 发布
 
@@ -42,9 +43,18 @@ pnpm submit:chrome
 pnpm submit:edge
 pnpm submit:firefox
 
+# 一次提交三个商店
+pnpm submit
+
 # 仅测试密钥
 pnpm submit:chrome --dry-run
+pnpm submit --dry-run
 ```
 
 > `wxt submit` 需要显式传入要上传的 ZIP 文件，否则会报
-> `No ZIP files detected to upload`。上面的 `submit:*` 脚本会先构建 ZIP 再提交。
+> `No ZIP files detected to upload`。`submit*` 脚本统一走
+> `scripts/submit.mjs`：先清理 `.output` 里的旧包，再构建 ZIP，
+> 最后把解析出的绝对路径传给 `wxt submit`。
+>
+> 这样在 Windows 下也能用（不依赖 `rm`、`VAR=值` 语法和 shell 通配符），
+> 脚本还会自动设置 `NODE_USE_ENV_PROXY=1`，让 Node 的 `fetch` 走 `https_proxy`。
