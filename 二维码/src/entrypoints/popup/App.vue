@@ -2,7 +2,9 @@
 import { onMounted } from 'vue';
 import qrcode from 'qrcode-generator';
 import { decodeQrFromImageData, getImageDataFromDataUrl } from '@/services/qrScanner';
-import { useNotify } from '@/composables/useSweetAlert2';
+import { isLinkText, toOpenableUrl } from '@/services/linkText';
+import { useNotify } from '@/composables/useNotify';
+import NotifyHost from '@/components/NotifyHost.vue';
 
 // 设置 qrcode 库使用 UTF-8 编码, 避免汉字乱码问题
 qrcode.stringToBytes = (s: string) => Array.from(new TextEncoder().encode(s));
@@ -128,23 +130,32 @@ async function scanImage(imageUrl: string) {
     return;
   }
 
+  // 文字结果没有可打开的链接, 只提供复制操作
+  const isLink = isLinkText(result);
+
   const response = await fire({
     toast: false,
     icon: 'success',
     title: t('recognitionSuccess'),
     text: result,
-    showCancelButton: true,
-    confirmButtonText: t('openLink'),
-    cancelButtonText: t('copyLink'),
+    showCancelButton: isLink,
+    confirmButtonText: isLink ? t('openLink') : t('copyContent'),
+    cancelButtonText: isLink ? t('copyLink') : undefined,
     showCloseButton: true,
   });
 
-  if (response.isConfirmed) {
-    const url = result.startsWith('http') ? result : `https://${result}`;
-    window.open(url, '_blank');
+  if (isLink) {
+    if (response.isConfirmed) {
+      window.open(toOpenableUrl(result), '_blank');
+      return;
+    }
+    if (response.dismiss === 'cancel') {
+      await navigator.clipboard.writeText(result);
+    }
     return;
   }
-  if (response.dismiss === 'cancel') {
+
+  if (response.isConfirmed) {
     await navigator.clipboard.writeText(result);
   }
 }
@@ -274,6 +285,7 @@ function generateQRCode(text: string) {
 
 <template>
   <div id="qrcode-container" class="bg-slate-50 border border-slate-200 rounded-lg shadow-sm"></div>
+  <NotifyHost />
 </template>
 
 <style>

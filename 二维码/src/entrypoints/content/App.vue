@@ -8,10 +8,12 @@ import {
     isSameOrigin,
     loadImageDataFromUrl,
 } from '@/services/qrScanner';
+import { isLinkText, toOpenableUrl } from '@/services/linkText';
 
 // UI组件
+import NotifyHost from '@/components/NotifyHost.vue';
 import PasteImageDialog from '@/components/PasteImageDialog.vue';
-import { useNotify } from '@/composables/useSweetAlert2';
+import { useNotify } from '@/composables/useNotify';
 import { useScreenshot, type ScreenshotResult } from '@/composables/useScreenshot';
 
 
@@ -167,23 +169,32 @@ async function decodeAndNotify(imageData: ImageData) {
     close();// 关闭正在识别的通知
 
     if (result) {
+        // 文字结果没有可打开的链接, 只提供复制操作
+        const isLink = isLinkText(result);
+
         const response = await fire({
             toast: false,
             icon: 'success',
             title: t('recognitionSuccess'),
             text: result,
-            showCancelButton: true,
-            confirmButtonText: t('openLink'),
-            cancelButtonText: t('copyLink'),
+            showCancelButton: isLink,
+            confirmButtonText: isLink ? t('openLink') : t('copyContent'),
+            cancelButtonText: isLink ? t('copyLink') : undefined,
             showCloseButton: true,
         });
 
-        if (response.isConfirmed) {
-            const url = result.startsWith('http') ? result : `https://${result}`;
-            window.open(url, '_blank');
+        if (isLink) {
+            if (response.isConfirmed) {
+                window.open(toOpenableUrl(result), '_blank');
+                return;
+            }
+            if (response.dismiss === 'cancel') {
+                await navigator.clipboard.writeText(result);
+            }
             return;
         }
-        if (response.dismiss === 'cancel') {
+
+        if (response.isConfirmed) {
             await navigator.clipboard.writeText(result);
         }
         return;
@@ -220,5 +231,6 @@ function fetchImageViaProxy(url: string): Promise<string> {
 <template>
     <div class="qr-content-root">
         <PasteImageDialog v-if="isPasteDialogOpen" @close="isPasteDialogOpen = false" />
+        <NotifyHost />
     </div>
 </template>
