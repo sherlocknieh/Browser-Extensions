@@ -18,9 +18,9 @@ export default defineConfig({
     // 调试时自动打开的页面
     startUrls: [
       'about:newtab',
-      'https://inftab.com/',
       'https://en.wikipedia.org/wiki/QR_code',
       'https://www.deepseek.com/images/app-qrcode.png',
+      'https://inftab.com/',
     ],
   },
   manifest: {
