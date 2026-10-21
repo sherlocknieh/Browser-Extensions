@@ -4,11 +4,19 @@ import {
     type PopupNoticePayload,
     type PopupNoticeRecord,
 } from '@/services/popupNotice';
+import { getMenuIcon, type MenuIconName } from '@/services/menuIcons';
 
 export default defineBackground(() => {
 
     // 优先使用内存态的 session 存储, 不可用时回退 local
     const storageArea = () => browser.storage.session ?? browser.storage.local;
+
+    // 地址栏图标 (Firefox page action) 的显示状态, 持久化保存, 默认显示
+    const PAGE_ACTION_VISIBLE_KEY = 'pageActionVisible';
+    const isPageActionVisible = async () => {
+        const stored = await browser.storage.local.get(PAGE_ACTION_VISIBLE_KEY);
+        return stored[PAGE_ACTION_VISIBLE_KEY] !== false;
+    };
 
     // popup 通过长连接告知自己的打开状态, 断开即代表已关闭
     let popupPort: Browser.runtime.Port | null = null;
@@ -108,51 +116,98 @@ export default defineBackground(() => {
         void openPopup().catch(() => {});
     };
 
+    // Firefox 支持为菜单项指定自定义图标 (Chrome 不支持, 因此仅在 Firefox 构建中传入);
+    // 图标内嵌在 src/services/menuIcons.ts 中, 颜色跟随菜单主题自动变化
+    const menuIcons = (name: MenuIconName) => import.meta.env.FIREFOX
+        ? { icons: { 16: getMenuIcon(name) } }
+        : {};
+
+    // Chrome/Edge 不支持菜单图标, 用 emoji 前缀提升辨识度; Firefox 已有图标, 不重复添加
+    type MenuMessageKey = 'decodeQR' | 'decodeQRSvg' | 'generateQR_selection' | 'pasteImage'
+        | 'screenShot' | 'generateQR_link' | 'showPageAction' | 'hidePageAction';
+    const menuTitle = (key: MenuMessageKey, emoji: string) => {
+        const title = browser.i18n.getMessage(key);
+        return import.meta.env.FIREFOX ? title : `${emoji} ${title}`;
+    };
+
     // 右键菜单初始化
-    const addContextMenus = () => {
+    const addContextMenus = async () => {
+        const pageActionVisible = await isPageActionVisible();
         browser.contextMenus.removeAll(() => {
             // 添加菜单: 识别图中二维码
             browser.contextMenus.create({
                 id: "decodeQR",
-                title: browser.i18n.getMessage("decodeQR"),
-                contexts: ["image"]
+                title: menuTitle("decodeQR", "🔍"),
+                contexts: ["image"],
+                ...menuIcons("scan")
             });
             // 添加菜单: 识别图中二维码 (直接打开的 SVG 是文档而非 <img>, 右键上下文为 page)
             browser.contextMenus.create({
                 id: "decodeQRPage",
-                title: browser.i18n.getMessage("decodeQRSvg"),
+                title: menuTitle("decodeQRSvg", "🔍"),
                 contexts: ["page"],
-                documentUrlPatterns: ["*://*/*.svg*", "file:///*.svg*"]
+                documentUrlPatterns: ["*://*/*.svg*", "file:///*.svg*"],
+                ...menuIcons("scan")
             });
             // 添加菜单: 选中文字生成二维码
             browser.contextMenus.create({
                 id: "generateQR_selection",
-                title: browser.i18n.getMessage("generateQR_selection"),
-                contexts: ["selection"]
+                title: menuTitle("generateQR_selection", "📝"),
+                contexts: ["selection"],
+                ...menuIcons("text")
             });
             // 添加菜单: 粘贴图片识别二维码
             browser.contextMenus.create({
                 id: "pasteImageQR",
-                title: browser.i18n.getMessage("pasteImage"),
-                contexts: ["action", "page_action"] // 在工具栏图标和地址栏 PageAction 右键菜单中显示
+                title: menuTitle("pasteImage", "📋"),
+                contexts: ["action", "page_action"], // 在工具栏图标和地址栏 PageAction 右键菜单中显示
+                ...menuIcons("paste")
             });
             // 添加菜单: 截屏识别二维码
             browser.contextMenus.create({
                 id: "screenshotQR",
-                title: browser.i18n.getMessage("screenShot"),
-                contexts: ["action", "image", "page_action"]
+                title: menuTitle("screenShot", "📷"),
+                contexts: ["action", "image", "page_action"],
+                ...menuIcons("screenshot")
             });
             // 添加菜单: 链接生成二维码
             browser.contextMenus.create({
                 id: "generateQR_link",
-                title: browser.i18n.getMessage("generateQR_link"),
-                contexts: ["link"]
+                title: menuTitle("generateQR_link", "🔗"),
+                contexts: ["link"],
+                ...menuIcons("link")
             });
+            // Firefox 地址栏图标开关: 工具栏图标右键可重新显示, 地址栏图标右键可关闭
+            if (browser.pageAction) {
+                browser.contextMenus.create({
+                    id: "showPageAction",
+                    title: menuTitle("showPageAction", "👁️"),
+                    contexts: ["action"],
+                    visible: !pageActionVisible,
+                    ...menuIcons("show")
+                });
+                browser.contextMenus.create({
+                    id: "hidePageAction",
+                    title: menuTitle("hidePageAction", "🚫"),
+                    contexts: ["page_action"],
+                    visible: pageActionVisible,
+                    ...menuIcons("hide")
+                });
+            }
         });
     };
 
     // 右键菜单点击事件处理
     const handleContextMenusClick = (info: Browser.contextMenus.OnClickData, tab?: Browser.tabs.Tab) => {
+        // 地址栏图标开关不依赖标签页
+        if (info.menuItemId === "showPageAction") {
+            void setPageActionVisible(true);
+            return;
+        }
+        if (info.menuItemId === "hidePageAction") {
+            void confirmHidePageAction();
+            return;
+        }
         const tabId = tab?.id;      // 获取当前标签页 ID
         if (tabId == null) {
             console.warn('tabId is null');  // tabId 不存在则警告并返回
@@ -188,23 +243,78 @@ export default defineBackground(() => {
         }
     };
 
+    // 同步"显示/关闭地址栏图标"菜单项的可见性, 只保留与当前状态对应的那一项
+    const syncPageActionMenus = async (visible?: boolean) => {
+        const current = visible ?? await isPageActionVisible();
+        browser.contextMenus.update('showPageAction', { visible: !current }).catch(() => {});
+        browser.contextMenus.update('hidePageAction', { visible: current }).catch(() => {});
+    };
+
+    // 显示/隐藏地址栏图标 (Firefox), 并记住状态
+    const setPageActionVisible = async (visible: boolean) => {
+        await browser.storage.local.set({ [PAGE_ACTION_VISIBLE_KEY]: visible });
+        const pageAction = browser.pageAction;
+        if (pageAction) {
+            const tabs = await browser.tabs.query({});
+            await Promise.all(tabs.map(async (tab) => {
+                if (tab.id == null) return;
+                try {
+                    await (visible ? pageAction.show(tab.id) : pageAction.hide(tab.id));
+                } catch {
+                    // 个别标签页 (如扩展页面) 可能不允许操作, 忽略即可
+                }
+            }));
+        }
+        void syncPageActionMenus(visible);
+    };
+
+    // 隐藏地址栏图标前用统一的 popup 通知确认, 并提示如何重新显示
+    const confirmHidePageAction = async () => {
+        await showPopupNotification({
+            options: {
+                toast: false,
+                icon: 'info',
+                title: browser.i18n.getMessage('hidePageActionConfirmTitle'),
+                text: browser.i18n.getMessage('hidePageActionConfirmText'),
+                showCloseButton: true,
+                showCancelButton: true,
+                confirmButtonText: browser.i18n.getMessage('hidePageActionConfirmBtn'),
+                cancelButtonText: browser.i18n.getMessage('cancelBtn'),
+            },
+            confirmAction: { kind: 'hidePageAction' },
+        });
+    };
+
     // 显示地址栏图标 (Firefox)
-    const showPageAction = (tabId?: number) => {
+    const showPageAction = async (tabId?: number) => {
         const pageAction = browser.pageAction;
         if (!pageAction) return;
-        if (tabId != null) {
-            pageAction.show(tabId);
-            return;
-        }
-        browser.tabs.query({}).then((tabs) => {
+        try {
+            if (!(await isPageActionVisible())) return;
+            const tabs = tabId != null ? [{ id: tabId }] : await browser.tabs.query({});
             for (const tab of tabs) {
-                if (tab.id != null) pageAction.show(tab.id);
+                if (tab.id == null) continue;
+                try {
+                    // show() 在部分类型定义中返回 void, 运行时则可能是 Promise
+                    void Promise.resolve(pageAction.show(tab.id)).catch(() => {});
+                } catch {
+                    // 忽略受限标签页导致的失败
+                }
             }
-        });
+        } catch {
+            // 忽略受限标签页导致的失败
+        }
     };
 
     // 内容脚本消息处理
     const handleContentScriptMessage = (request: any, _sender: Browser.runtime.MessageSender, sendResponse: (response: any) => void) => {
+        // 确认通知点击"隐藏图标"后才真正隐藏地址栏图标
+        if (request.action === "hidePageActionConfirmed") {
+            setPageActionVisible(false)
+                .then(() => sendResponse({ success: true }))
+                .catch(() => sendResponse({ success: false }));
+            return true;
+        }
         // 页面通知转发到 popup
         if (request.action === "showNotification") {
             showPopupNotification(request.payload)
@@ -278,7 +388,8 @@ export default defineBackground(() => {
         });
     });
     browser.runtime.onInstalled.addListener(addContextMenus);               // 扩展安装完成后, 初始化右键菜单
-    browser.tabs.onUpdated.addListener((tabId) => showPageAction(tabId));   // 标签页加载完成后, 显示地址栏图标
+    browser.runtime.onStartup.addListener(addContextMenus);                 // 浏览器启动时同步菜单可见状态
+    browser.tabs.onUpdated.addListener((tabId) => void showPageAction(tabId)); // 标签页加载完成后, 显示地址栏图标
     browser.contextMenus.onClicked.addListener(handleContextMenusClick);    // 右键菜单点击事件处理
     browser.runtime.onMessage.addListener(handleContentScriptMessage);      // 处理内容脚本的请求
 });

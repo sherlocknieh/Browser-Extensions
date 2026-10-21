@@ -28,6 +28,15 @@ export function usePopupNoticeHost() {
             }
             return;
         }
+        if (action.kind === 'hidePageAction') {
+            // 用户确认后再由后台隐藏地址栏图标
+            try {
+                await browser.runtime.sendMessage({ action: 'hidePageActionConfirmed' });
+            } catch {
+                // 后台不可用时保持安静
+            }
+            return;
+        }
         if (action.kind === 'open') {
             window.open(toOpenableUrl(action.value), '_blank');
             return;

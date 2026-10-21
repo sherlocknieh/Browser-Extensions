@@ -3,11 +3,13 @@ import type { NotifyIcon } from '@/composables/useNotify';
 // 页面通知统一转发给 popup 显示, 该键保存 popup 尚未展示的最新一条通知
 export const POPUP_NOTICE_KEY = 'qrNotification';
 
-// open/copy 由 popup 直接执行; screenshot 需要 popup 通知当前页面的内容脚本开始截图
+// open/copy 由 popup 直接执行; screenshot 需要 popup 通知当前页面的内容脚本开始截图;
+// hidePageAction 让后台在用户确认后隐藏地址栏图标
 export type PopupNoticeAction =
     | { kind: 'open'; value: string }
     | { kind: 'copy'; value: string }
-    | { kind: 'screenshot' };
+    | { kind: 'screenshot' }
+    | { kind: 'hidePageAction' };
 
 // 可跨进程传递的通知参数: didOpen 等函数无法序列化, 用 loading 标记加载状态
 export interface PopupNoticeOptions {

@@ -35,6 +35,30 @@
     "message": "截图识别二维码/条形码",
     "description": "右键菜单项：截图识别二维码或条形码"
   },
+  "showPageAction": {
+    "message": "显示地址栏图标",
+    "description": "工具栏图标右键菜单项：显示地址栏图标"
+  },
+  "hidePageAction": {
+    "message": "隐藏地址栏图标",
+    "description": "地址栏图标右键菜单项：隐藏地址栏图标"
+  },
+  "hidePageActionConfirmTitle": {
+    "message": "隐藏地址栏图标？",
+    "description": "隐藏地址栏图标前确认页的标题"
+  },
+  "hidePageActionConfirmText": {
+    "message": "如需重新显示：\n1. 在扩展工具栏中找到二维码图标\n2. 右键选择「显示地址栏图标」",
+    "description": "确认消息：提示用户如何重新显示地址栏图标"
+  },
+  "hidePageActionConfirmBtn": {
+    "message": "隐藏图标",
+    "description": "确认隐藏地址栏图标的按钮"
+  },
+  "cancelBtn": {
+    "message": "取消",
+    "description": "通用取消按钮"
+  },
   "fetchingImage": {
     "message": "正在获取图片...",
     "description": "获取图片时的加载提示"

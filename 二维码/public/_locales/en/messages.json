@@ -35,6 +35,30 @@
     "message": "Take a Screenshot to Scan QR Code or Barcode",
     "description": "Context menu item for taking screenshot to recognize QR code"
   },
+  "showPageAction": {
+    "message": "Show Address Bar Icon",
+    "description": "Toolbar context menu item for showing the Firefox address bar icon"
+  },
+  "hidePageAction": {
+    "message": "Hide Address Bar Icon",
+    "description": "Address bar icon context menu item for hiding the Firefox address bar icon"
+  },
+  "hidePageActionConfirmTitle": {
+    "message": "Hide Address Bar Icon?",
+    "description": "Title of the confirmation page shown before hiding the address bar icon"
+  },
+  "hidePageActionConfirmText": {
+    "message": "The QR code icon will be removed from the address bar.\n\nTo show it again:\n1. Right-click the extension icon in the toolbar\n2. Choose \"Show Address Bar Icon\".",
+    "description": "Confirmation message explaining how to restore the address bar icon"
+  },
+  "hidePageActionConfirmBtn": {
+    "message": "Hide Icon",
+    "description": "Confirm button that hides the address bar icon"
+  },
+  "cancelBtn": {
+    "message": "Cancel",
+    "description": "Generic cancel button"
+  },
   "fetchingImage": {
     "message": "Fetching the image...",
     "description": "Loading message when fetching image"
