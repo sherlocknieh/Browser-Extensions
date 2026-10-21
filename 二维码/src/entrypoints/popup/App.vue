@@ -145,7 +145,7 @@ async function decodeAndShow(getDataUrl: () => Promise<string>, errorTitle: stri
   const response = await fire({
     toast: false,
     icon: 'success',
-    title: t(result.kind === 'barcode' ? 'barcodeScanSuccess' : 'recognitionSuccess'),
+    title: t(result.kind === 'barcode' ? 'barcodeScanSuccess' : 'qrcodeScanSuccess'),
     text: result.text,
     showCancelButton: isLink,
     confirmButtonText: isLink ? t('openLink') : t('copyContent'),

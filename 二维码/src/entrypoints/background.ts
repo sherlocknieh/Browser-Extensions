@@ -110,7 +110,7 @@ export default defineBackground(() => {
         void openPopup().catch(() => {});
     };
 
-    // 浏览器内置 PDF 阅读器等页面可能无法注入内容脚本, 此时截取当前视口,
+    // Firefox 浏览器内置 PDF 阅读器页面无法注入内容脚本, 此时截取当前视口,
     // 再在新标签页中框选识别
     const CAPTURE_IMAGE_KEY = 'qrCaptureImage';
     const showCropScan = async (windowId?: number) => {
@@ -141,7 +141,7 @@ export default defineBackground(() => {
         : {};
 
     // Chrome/Edge 不支持菜单图标, 用 emoji 前缀提升辨识度; Firefox 已有图标, 不重复添加
-    type MenuMessageKey = 'decodeQR' | 'decodeQRSvg' | 'generateQR_selection' | 'pasteImage'
+    type MenuMessageKey = 'decodeQR' | 'generateQR_selection'
         | 'screenShot' | 'generateQR_link' | 'showPageAction' | 'hidePageAction';
     const menuTitle = (key: MenuMessageKey, emoji: string) => {
         const title = browser.i18n.getMessage(key);
@@ -162,7 +162,7 @@ export default defineBackground(() => {
             // 添加菜单: 识别图中二维码 (直接打开的 SVG 是文档而非 <img>, 右键上下文为 page)
             browser.contextMenus.create({
                 id: "decodeQRPage",
-                title: menuTitle("decodeQRSvg", "🔍"),
+                title: menuTitle("decodeQR", "🔍"),
                 contexts: ["page"],
                 documentUrlPatterns: ["*://*/*.svg*", "file:///*.svg*"],
                 ...menuIcons("scan")
@@ -173,13 +173,6 @@ export default defineBackground(() => {
                 title: menuTitle("generateQR_selection", "📝"),
                 contexts: ["selection"],
                 ...menuIcons("text")
-            });
-            // 添加菜单: 粘贴图片识别二维码
-            browser.contextMenus.create({
-                id: "pasteImageQR",
-                title: menuTitle("pasteImage", "📋"),
-                contexts: ["action", "page_action"], // 在工具栏图标和地址栏 PageAction 右键菜单中显示
-                ...menuIcons("paste")
             });
             // 添加菜单: 截屏识别二维码
             browser.contextMenus.create({
@@ -242,11 +235,6 @@ export default defineBackground(() => {
         } else if (info.menuItemId === "decodeQRPage") {
             // 直接打开的 SVG 是 XML 文档, 内容脚本无法创建 canvas 和弹窗, 交给 popup 处理
             showQrFromImagePage(info.pageUrl ?? tab?.url);
-        } else if (info.menuItemId === "pasteImageQR") {
-            // 粘贴图片识别二维码
-            browser.tabs.sendMessage(tabId, {
-                action: "pasteImageQR"
-            });
         } else if (info.menuItemId === "screenshotQR") {
             // 截图识别二维码: 优先使用内容脚本的区域截图 (Chrome 的 PDF 页面也能注入);
             // 内容脚本不可用(如 Firefox 内置 PDF 阅读器)时, 改为截取视口后框选识别

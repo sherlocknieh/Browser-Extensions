@@ -4,27 +4,23 @@
     "description": "Application name"
   },
   "appDescription": {
-    "message": "QR code generator, QR code and barcode scanner",
+    "message": "QR code generator and scanner",
     "description": "Application description"
   },
   "generateQR_link": {
-    "message": "QR Code for This Link",
+    "message": "Generate QR Code for This Link",
     "description": "Context menu item for generating QR code from current link"
   },
   "generateQR_selection": {
-    "message": "QR Code for Selected Text",
+    "message": "Generate QR Code for Selected Text",
     "description": "Context menu item for generating QR code from selected text"
   },
   "decodeQR": {
-    "message": "Scan QR Code or Barcode in This Image",
+    "message": "Scan QR Code in This Image",
     "description": "Context menu item for recognizing QR code in image"
   },
-  "decodeQRSvg": {
-    "message": "Scan QR Code or Barcode in This SVG Page",
-    "description": "Context menu item for recognizing QR code in an SVG document opened directly"
-  },
   "screenShot": {
-    "message": "Take a Screenshot to Scan QR Code or Barcode",
+    "message": "Screenshot, Select and Scan",
     "description": "Context menu item for taking screenshot to recognize QR code"
   },
   "showPageAction": {
@@ -40,7 +36,7 @@
     "description": "Title of the confirmation page shown before hiding the address bar icon"
   },
   "hidePageActionConfirmText": {
-    "message": "The QR code icon will be removed from the address bar.\n\nTo show it again:\n1. Right-click the extension icon in the toolbar\n2. Choose \"Show Address Bar Icon\".",
+    "message": "This will remove the QR code icon from the address bar.\n\nTo show it again:\n1. Right-click the extension icon in the toolbar\n2. Choose \"Show Address Bar Icon\".",
     "description": "Confirmation message explaining how to restore the address bar icon"
   },
   "hidePageActionConfirmBtn": {
@@ -59,12 +55,12 @@
     "message": "Scanning QR code or barcode...",
     "description": "Loading message when decoding QR code"
   },
-  "recognitionSuccess": {
-    "message": "Scan Success",
+  "qrcodeScanSuccess": {
+    "message": "QR Code Scan Success",
     "description": "Success dialog title"
   },
   "barcodeScanSuccess": {
-    "message": "Barcode scan success",
+    "message": "Barcode Scan Success",
     "description": "Success dialog title when a barcode is detected"
   },
   "openLink": {
@@ -83,10 +79,6 @@
     "message": "Error",
     "description": "Generic error title"
   },
-  "imageLoadFailed": {
-    "message": "Image load failed",
-    "description": "Error message when image element cannot load"
-  },
   "crossOriginNotice": {
     "message": "Cross-origin image; this may take a moment",
     "description": "Notice for slower cross-origin fetch"
@@ -96,24 +88,24 @@
     "description": "Button in the cross-origin loading notice that opens the image in a new tab"
   },
   "proxyFetchFailed": {
-    "message": "Proxy fetch failed",
-    "description": "Error when background proxy fetch fails"
+    "message": "Background fetch image failed",
+    "description": "Error when background fetch fails"
   },
   "crossOriginScreenshotHint": {
-    "message": "Try screenshot recognition instead: right-click and choose \"Take a Screenshot to Scan QR Code or Barcode\", or click the button below.",
+    "message": "Try screenshot scan instead:",
     "description": "Hint suggesting screenshot recognition when a cross-origin image cannot be fetched"
   },
   "screenshotScan": {
-    "message": "Use a screenshot instead",
-    "description": "Button that switches to screenshot recognition after a cross-origin fetch failure"
+    "message": "Screenshot Scan",
+    "description": "Button that switches to screenshot scan after a cross-origin fetch failure"
   },
   "screenshotFailed": {
-    "message": "Screenshot failed",
+    "message": "Screenshot scan failed",
     "description": "Error title for screenshot operation failure"
   },
   "screenshotFailedMsg": {
-    "message": "The screenshot could not be captured. Make sure the page is a normal web page and try again.",
-    "description": "Message shown when screenshot startup fails"
+    "message": "The screenshot scan could not be captured. Make sure the page is a normal web page and try again.",
+    "description": "Message shown when screenshot scan fails"
   },
   "screenshotCancelled": {
     "message": "Screenshot cancelled",
@@ -135,37 +127,13 @@
     "message": "Scan",
     "description": "Button that confirms the selected area for QR decoding"
   },
+  "screenshotHint": {
+    "message": "Drag to select the area you want to scan",
+    "description": "Hint telling the user to drag-select the area to scan"
+  },
   "confirm": {
     "message": "OK",
     "description": "Confirm button text"
-  },
-  "pasteImage": {
-    "message": "Paste Image to Scan QR Code or Barcode",
-    "description": "Context menu item for pasting image to recognize QR code"
-  },
-  "pasteDialogTitle": {
-    "message": "Paste Image to Scan QR Code or Barcode",
-    "description": "Dialog title"
-  },
-  "pasteDialogHint": {
-    "message": "Supports pasting, dragging, or clicking to select images",
-    "description": "Dialog subtitle"
-  },
-  "dropZoneText": {
-    "message": "Click to load local image",
-    "description": "Main text for drop zone"
-  },
-  "dropZoneHint": {
-    "message": "Ctrl+V to paste from clipboard",
-    "description": "Hint text for drop zone"
-  },
-  "scanningText": {
-    "message": "Scanning QR code or barcode...",
-    "description": "Text shown while scanning"
-  },
-  "clearImageBtn": {
-    "message": "Clear Image",
-    "description": "Clear button text"
   },
   "closeBtn": {
     "message": "Close",
@@ -175,38 +143,12 @@
     "message": "Copy Content",
     "description": "Copy button text"
   },
-  "alreadyCopied": {
-    "message": "Copied",
-    "description": "Text shown after successful copy"
-  },
-  "recognitionSuccessTitle": {
-    "message": "Scan success: ",
-    "description": "Success message prefix"
-  },
   "recognitionFailedMsg": {
-    "message": "No valid QR code or barcode found",
-    "description": "Message when no QR code is found"
-  },
-  "clipboardNoImage": {
-    "message": "No image data found in clipboard, please copy an image first",
-    "description": "Hint for invalid paste"  },
-  "dragDropImageOnly": {
-    "message": "Please drag and drop an image file",
-    "description": "Notice for non-image drag and drop"
-  },
-  "unsupportedFormat": {
-    "message": "Unsupported image format: ",
-    "description": "Format error prefix"
-  },
-  "formatUnknown": {
-    "message": "Unknown",
-    "description": "Placeholder for unknown format"
+    "message": "No QR code found, or the image is not clear enough",
+    "description": "Message shown when screenshot scan fails"
   },
   "recognitionFailed": {
     "message": "Scan failed",
-    "description": "Error title after recognition fails"  },
-  "unknownError": {
-    "message": "An unknown error occurred",
-    "description": "Generic error message"
+    "description": "Error title after recognition fails"
   }
 }

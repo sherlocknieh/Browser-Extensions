@@ -7,8 +7,7 @@ export type ScreenshotResult =
 
 type CaptureResponse = { success: true; dataUrl: string } | { success: false; error?: string };
 
-// 由后台调用 captureVisibleTab 获取当前视口图像: 不会弹出屏幕共享提示条,
-// 也不会压缩页面视口, 避免截图区域底部出现空白带。
+// 使用 captureVisibleTab 获取当前视口图像。
 async function captureVisibleTab(): Promise<string> {
     let response: CaptureResponse | undefined;
     try {

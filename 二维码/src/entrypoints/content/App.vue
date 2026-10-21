@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { onBeforeUnmount, onMounted } from 'vue';
 
 // 非UI组件
 import {
@@ -13,7 +13,6 @@ import { isLinkText, toOpenableUrl } from '@/services/linkText';
 
 // UI组件
 import NotifyHost from '@/components/NotifyHost.vue';
-import PasteImageDialog from '@/components/PasteImageDialog.vue';
 import { useNotify } from '@/composables/useNotify';
 import { useScreenshot, type ScreenshotResult } from '@/composables/useScreenshot';
 import {
@@ -49,7 +48,7 @@ async function notifyResult(result: DecodeResult) {
         options: {
             toast: false,
             icon: 'success',
-            title: t(result.kind === 'barcode' ? 'barcodeScanSuccess' : 'recognitionSuccess'),
+            title: t(result.kind === 'barcode' ? 'barcodeScanSuccess' : 'qrcodeScanSuccess'),
             text: result.text,
             showCancelButton: isLink,
             confirmButtonText: isLink ? t('openLink') : t('copyContent'),
@@ -83,10 +82,6 @@ async function notifyResult(result: DecodeResult) {
     }
 }
 
-
-// 图片粘贴对话框的开关变量
-const isPasteDialogOpen = ref(false);
-
 // 国际化文本获取函数，提供默认值以防止缺失翻译导致的显示问题
 const t = (key: Parameters<typeof browser.i18n.getMessage>[0]) =>
     browser.i18n.getMessage(key) || String(key);
@@ -98,9 +93,6 @@ const mainProcess = (message: { action?: string; imageUrl?: string }) => {
     }
     if (message.action === 'screenshotQR') {
         handleScreenshot();
-    }
-    if (message.action === 'pasteImageQR') {
-        isPasteDialogOpen.value = true;
     }
 };
 
@@ -356,7 +348,6 @@ function fetchImageViaProxy(url: string): Promise<string> {
 
 <template>
     <div class="qr-content-root">
-        <PasteImageDialog v-if="isPasteDialogOpen" @close="isPasteDialogOpen = false" />
         <NotifyHost />
     </div>
 </template>

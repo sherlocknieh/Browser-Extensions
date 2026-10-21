@@ -19,7 +19,6 @@ const FLOATING_VIEWPORT_HEIGHT_RATIO = 0.8;
 const MIN_SELECTION = 8;
 const HANDLE_SIZE = 6;
 const HANDLE_HIT_SIZE = 9;
-const LAYOUT_PADDING = 8;
 const MASK_COLOR = 'rgba(0, 0, 0, 0.4)';
 const ACCENT_COLOR = '#2CABFF';
 
@@ -170,6 +169,11 @@ const showToolbar = computed(
     () => phase.value === 'select' && loaded.value && hasSelection.value,
 );
 
+// 入场动画结束后、尚未框选时提示用户拖动框选
+const showHint = computed(
+    () => phase.value === 'select' && loaded.value && !busy.value && !hasSelection.value,
+);
+
 const toolbarStyle = computed(() => ({
     left: `${toolbarPosition.value.left}px`,
     top: `${toolbarPosition.value.top}px`,
@@ -186,6 +190,20 @@ const sizeLabel = computed(() => {
     const rect = selection.value;
     if (!rect) return '';
     return `${Math.round(rect.width * sourceScaleX.value)} × ${Math.round(rect.height * sourceScaleY.value)}`;
+});
+
+const showSizeLabel = computed(
+    () => phase.value === 'select' && loaded.value && !busy.value && hasSelection.value,
+);
+
+// 尺寸标记独立于工具栏, 固定在选框左上方
+const sizeLabelStyle = computed(() => {
+    const rect = selection.value;
+    if (!rect) return {};
+    return {
+        left: `${Math.round(rect.x)}px`,
+        top: `${Math.round(rect.y)}px`,
+    };
 });
 
 const getPointerPosition = (event: PointerEvent) => {
@@ -272,24 +290,10 @@ const updateToolbarPosition = () => {
     const rect = selection.value;
     if (!toolbar || !rect || !hasSelection.value) return;
 
-    const width = layout.value.width;
-    const height = layout.value.height;
-    const maxLeft = Math.max(LAYOUT_PADDING, width - toolbar.offsetWidth - LAYOUT_PADDING);
-    const maxTop = Math.max(LAYOUT_PADDING, height - toolbar.offsetHeight - LAYOUT_PADDING);
-
-    const left = clamp(
-        rect.x + (rect.width - toolbar.offsetWidth) / 2,
-        LAYOUT_PADDING,
-        maxLeft,
-    );
-    let top = rect.y + rect.height + 8;
-    if (top > maxTop) {
-        top = rect.y - toolbar.offsetHeight - 8;
-    }
-
+    // 工具栏允许溢出浮窗, 只跟随选区水平居中显示在下方
     toolbarPosition.value = {
-        left: Math.round(left),
-        top: Math.round(clamp(top, LAYOUT_PADDING, maxTop)),
+        left: Math.round(rect.x + (rect.width - toolbar.offsetWidth) / 2),
+        top: Math.round(rect.y + rect.height + 8),
     };
 };
 
@@ -576,13 +580,15 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
+    <!-- 截图弹窗容器 -->
     <div
         v-if="loaded"
         ref="rootRef"
         class="qr-shot"
         :class="`qr-shot--${phase}`"
         :style="[rootStyle, { cursor: busy ? 'default' : cursor }]"
-    >
+    >   
+        <!-- 截图框选画布 -->
         <canvas
             ref="canvasRef"
             class="qr-shot-canvas"
@@ -591,14 +597,25 @@ onBeforeUnmount(() => {
             :style="canvasStyle"
             @pointerdown="handlePointerDown"
         />
+        <!-- 截图闪光效果容器 -->
         <div v-if="flashing" class="qr-shot-flash" aria-hidden="true">
             <span class="qr-shot-flash-edge edge-top" />
             <span class="qr-shot-flash-edge edge-right" />
             <span class="qr-shot-flash-edge edge-bottom" />
             <span class="qr-shot-flash-edge edge-left" />
         </div>
+        <!-- 截图框选提示语 -->
+        <Transition name="qr-shot-hint-fade">
+            <p v-if="showHint" class="qr-shot-hint" aria-live="polite">
+                {{ t('screenshotHint', 'Drag to select the area you want to scan') }}
+            </p>
+        </Transition>
+        <!-- 尺寸标记 -->
+        <span v-if="showSizeLabel" class="qr-shot-size" :style="sizeLabelStyle">
+            {{ sizeLabel }}
+        </span>
+        <!-- 截图工具栏 -->
         <div v-if="showToolbar" ref="toolbarRef" class="qr-shot-toolbar" :style="toolbarStyle">
-            <span class="qr-shot-size">{{ sizeLabel }}</span>
             <button class="qr-shot-btn" type="button" @click="selectAll">
                 {{ t('screenshotSelectAll', 'Select all') }}
             </button>
@@ -609,14 +626,13 @@ onBeforeUnmount(() => {
                 {{ t('screenshotConfirm', 'Scan') }}
             </button>
         </div>
+        <!-- 截图关闭按钮 -->
         <button
             class="qr-shot-close"
             type="button"
             :aria-label="t('closeBtn', 'Close')"
             @click="cancel"
-        >
-            ×
-        </button>
+        >×</button>
     </div>
 </template>
 
@@ -630,7 +646,7 @@ onBeforeUnmount(() => {
     box-shadow:
         0 0 0 1px rgba(0, 0, 0, 0.18),
         0 20px 45px rgba(0, 0, 0, 0.42);
-    overflow: hidden;
+    overflow: visible;
     user-select: none;
     transform-origin: top left;
     will-change: left, top, width, height;
@@ -644,6 +660,7 @@ onBeforeUnmount(() => {
 
 .qr-shot-canvas {
     display: block;
+    border-radius: inherit;
     touch-action: none;
     transition:
         width 420ms cubic-bezier(0.22, 0.61, 0.36, 1),
@@ -752,6 +769,36 @@ onBeforeUnmount(() => {
     }
 }
 
+.qr-shot-hint {
+    position: absolute;
+    top: 16px;
+    left: 50%;
+    max-width: calc(100% - 96px);
+    margin: 0;
+    padding: 7px 14px;
+    border-radius: 999px;
+    background: rgba(25, 25, 25, 0.82);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+    color: #fff;
+    font: 13px/1.4 system-ui, -apple-system, 'Segoe UI', sans-serif;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    pointer-events: none;
+    transform: translateX(-50%);
+}
+
+.qr-shot-hint-fade-enter-active,
+.qr-shot-hint-fade-leave-active {
+    transition: opacity 160ms ease;
+}
+
+.qr-shot-hint-fade-enter-from,
+.qr-shot-hint-fade-leave-to {
+    opacity: 0;
+}
+
 .qr-shot-toolbar {
     position: absolute;
     display: flex;
@@ -767,9 +814,17 @@ onBeforeUnmount(() => {
 }
 
 .qr-shot-size {
-    margin-right: 4px;
-    opacity: 0.85;
+    position: absolute;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: rgba(25, 25, 25, 0.82);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    color: #fff;
+    font: 12px/1.2 system-ui, -apple-system, 'Segoe UI', sans-serif;
     font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    pointer-events: none;
+    transform: translateY(calc(-100% - 6px));
 }
 
 .qr-shot-btn {
