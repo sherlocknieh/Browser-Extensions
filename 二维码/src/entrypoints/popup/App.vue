@@ -123,7 +123,7 @@ async function decodeAndShow(getDataUrl: () => Promise<string>, errorTitle: stri
   let result: string | null;
   try {
     const imageData = await getImageDataFromDataUrl(await getDataUrl());
-    result = decodeQrFromImageData(imageData);
+    result = await decodeQrFromImageData(imageData);
   } catch (error) {
     close();
     fire({

@@ -246,7 +246,7 @@ async function decodeAndNotify(imageData: ImageData) {
     await new Promise((resolve) => setTimeout(resolve, 50));
 
     // 调用二维码识别函数，获取识别结果
-    const result = decodeQrFromImageData(imageData);
+    const result = await decodeQrFromImageData(imageData);
 
     if (result) {
         // 文字结果没有可打开的链接, 只提供复制操作

@@ -207,7 +207,7 @@ async function scanQRCode() {
 
     try {
         const imageData = await getImageData();
-        const code = decodeQrFromImageData(imageData);
+        const code = await decodeQrFromImageData(imageData);
         if (code) {
             showSuccess(code);
         } else {
