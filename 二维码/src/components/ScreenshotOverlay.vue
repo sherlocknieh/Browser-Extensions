@@ -23,6 +23,14 @@ const LAYOUT_PADDING = 8;
 const MASK_COLOR = 'rgba(0, 0, 0, 0.4)';
 const ACCENT_COLOR = '#2CABFF';
 
+// 入场: 全屏 + 四周闪光, 再收缩到居中窗口
+const INTRO_FLASH_DURATION = 380;
+const INTRO_SHRINK_DURATION = 420;
+
+const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+type Phase = 'cover' | 'select';
+
 type Rect = { x: number; y: number; width: number; height: number };
 type Handle = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
 type DragState =
@@ -77,6 +85,9 @@ const loaded = ref(false);
 const selection = ref<Rect | null>(null);
 const toolbarPosition = ref({ left: 0, top: 0 });
 const cursor = ref('crosshair');
+const phase = ref<Phase>('cover');
+const flashing = ref(false);
+const settling = ref(false);
 
 const dpr = window.devicePixelRatio || 1;
 let image: HTMLImageElement | undefined;
@@ -117,24 +128,47 @@ const layout = computed(() => {
 const pixelWidth = computed(() => Math.max(1, Math.round(layout.value.width * dpr)));
 const pixelHeight = computed(() => Math.max(1, Math.round(layout.value.height * dpr)));
 
-const rootStyle = computed(() => ({
-    left: `${layout.value.left - 1}px`,
-    top: `${layout.value.top - 1}px`,
-    width: `${layout.value.width}px`,
-    height: `${layout.value.height}px`,
-}));
+// 入场动画期间浮窗从全屏收缩到居中窗口
+const rootStyle = computed(() => {
+    if (phase.value === 'cover') {
+        return {
+            left: '0px',
+            top: '0px',
+            width: `${viewport.value.width}px`,
+            height: `${viewport.value.height}px`,
+            '--qr-shot-radius': '0px',
+        };
+    }
+    return {
+        left: `${layout.value.left - 1}px`,
+        top: `${layout.value.top - 1}px`,
+        width: `${layout.value.width}px`,
+        height: `${layout.value.height}px`,
+        '--qr-shot-radius': '12px',
+    };
+});
 
 const canvasStyle = computed(() => ({
-    width: `${layout.value.width}px`,
-    height: `${layout.value.height}px`,
+    width:
+        phase.value === 'cover'
+            ? `${viewport.value.width}px`
+            : `${layout.value.width}px`,
+    height:
+        phase.value === 'cover'
+            ? `${viewport.value.height}px`
+            : `${layout.value.height}px`,
 }));
+
+const busy = computed(() => phase.value === 'cover' || settling.value);
 
 const hasSelection = computed(() => {
     const rect = selection.value;
     return rect !== null && rect.width >= MIN_SELECTION && rect.height >= MIN_SELECTION;
 });
 
-const showToolbar = computed(() => loaded.value && hasSelection.value);
+const showToolbar = computed(
+    () => phase.value === 'select' && loaded.value && hasSelection.value,
+);
 
 const toolbarStyle = computed(() => ({
     left: `${toolbarPosition.value.left}px`,
@@ -194,6 +228,7 @@ const draw = () => {
     const height = layout.value.height;
     context.setTransform(dpr, 0, 0, dpr, 0, 0);
     context.clearRect(0, 0, width, height);
+    // 画面始终按最终尺寸绘制, 由 CSS 过渡把全屏容器收缩到居中窗口
     context.drawImage(image, 0, 0, width, height);
 
     context.beginPath();
@@ -324,12 +359,43 @@ const cropSelection = (rect: Rect) => {
     return output.toDataURL('image/png');
 };
 
+let introTimer: number | undefined;
+let introSettleTimer: number | undefined;
+
+const clearTimers = () => {
+    if (introTimer !== undefined) window.clearTimeout(introTimer);
+    if (introSettleTimer !== undefined) window.clearTimeout(introSettleTimer);
+    introTimer = undefined;
+    introSettleTimer = undefined;
+};
+
+// 入场: 整屏截图覆盖视口并闪一下, 再收缩到居中窗口
+function startIntro() {
+    if (prefersReducedMotion) {
+        phase.value = 'select';
+        return;
+    }
+    phase.value = 'cover';
+    flashing.value = true;
+    introTimer = window.setTimeout(() => {
+        introTimer = undefined;
+        flashing.value = false;
+        settling.value = true;
+        phase.value = 'select';
+        introSettleTimer = window.setTimeout(() => {
+            introSettleTimer = undefined;
+            settling.value = false;
+        }, INTRO_SHRINK_DURATION);
+    }, INTRO_FLASH_DURATION);
+}
+
 const cancel = () => {
+    if (busy.value) return;
     emit('cancel');
 };
 
 const confirm = () => {
-    if (!selection.value || !hasSelection.value) return;
+    if (busy.value || !selection.value || !hasSelection.value) return;
     const result = cropSelection(selection.value);
     if (!result) return;
     emit('confirm', result);
@@ -345,7 +411,7 @@ const selectAll = () => {
 };
 
 const handlePointerDown = (event: PointerEvent) => {
-    if (event.button !== 0) return;
+    if (busy.value || event.button !== 0) return;
     event.preventDefault();
     // 捕获指针, 保证在窗口外松开鼠标时也能收到 pointerup
     canvasRef.value?.setPointerCapture(event.pointerId);
@@ -365,6 +431,7 @@ const handlePointerDown = (event: PointerEvent) => {
 };
 
 const handlePointerMove = (event: PointerEvent) => {
+    if (busy.value) return;
     const { x, y } = getPointerPosition(event);
     if (!drag) {
         updateCursor(x, y);
@@ -416,13 +483,13 @@ const handlePointerUp = (event: PointerEvent) => {
 
 const handleOutsidePointerDown = (event: PointerEvent) => {
     const target = event.target;
-    if (!loaded.value) return;
+    if (!loaded.value || busy.value) return;
     if (target instanceof Node && rootRef.value?.contains(target)) return;
     cancel();
 };
 
 const handleKeyDown = (event: KeyboardEvent) => {
-    if (!loaded.value) return;
+    if (!loaded.value || busy.value) return;
     if (event.key === 'Escape') {
         event.preventDefault();
         event.stopPropagation();
@@ -488,6 +555,7 @@ onMounted(() => {
         };
         imageAspect.value = imageSize.value.width / Math.max(1, imageSize.value.height);
         loaded.value = true;
+        startIntro();
     };
     element.onerror = () => emit('error');
     element.src = props.src;
@@ -499,6 +567,7 @@ onBeforeUnmount(() => {
     window.removeEventListener('resize', handleWindowResize);
     document.removeEventListener('keydown', handleKeyDown, true);
     document.removeEventListener('pointerdown', handleOutsidePointerDown, true);
+    clearTimers();
     if (resizeFrame !== undefined) {
         window.cancelAnimationFrame(resizeFrame);
         resizeFrame = undefined;
@@ -507,7 +576,13 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-    <div v-if="loaded" ref="rootRef" class="qr-shot" :style="[rootStyle, { cursor }]">
+    <div
+        v-if="loaded"
+        ref="rootRef"
+        class="qr-shot"
+        :class="`qr-shot--${phase}`"
+        :style="[rootStyle, { cursor: busy ? 'default' : cursor }]"
+    >
         <canvas
             ref="canvasRef"
             class="qr-shot-canvas"
@@ -516,6 +591,12 @@ onBeforeUnmount(() => {
             :style="canvasStyle"
             @pointerdown="handlePointerDown"
         />
+        <div v-if="flashing" class="qr-shot-flash" aria-hidden="true">
+            <span class="qr-shot-flash-edge edge-top" />
+            <span class="qr-shot-flash-edge edge-right" />
+            <span class="qr-shot-flash-edge edge-bottom" />
+            <span class="qr-shot-flash-edge edge-left" />
+        </div>
         <div v-if="showToolbar" ref="toolbarRef" class="qr-shot-toolbar" :style="toolbarStyle">
             <span class="qr-shot-size">{{ sizeLabel }}</span>
             <button class="qr-shot-btn" type="button" @click="selectAll">
@@ -540,32 +621,135 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-@keyframes qr-shot-enter {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-    }
-}
-
 .qr-shot {
     position: fixed;
     box-sizing: content-box;
     z-index: 2147483647;
     border: 1px solid rgba(255, 255, 255, 0.7);
-    border-radius: 12px;
+    border-radius: var(--qr-shot-radius, 12px);
     box-shadow:
         0 0 0 1px rgba(0, 0, 0, 0.18),
         0 20px 45px rgba(0, 0, 0, 0.42);
     overflow: hidden;
     user-select: none;
-    animation: qr-shot-enter 220ms ease-out both;
+    transform-origin: top left;
+    will-change: left, top, width, height;
+    transition:
+        left 420ms cubic-bezier(0.22, 0.61, 0.36, 1),
+        top 420ms cubic-bezier(0.22, 0.61, 0.36, 1),
+        width 420ms cubic-bezier(0.22, 0.61, 0.36, 1),
+        height 420ms cubic-bezier(0.22, 0.61, 0.36, 1),
+        border-radius 420ms cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
 .qr-shot-canvas {
     display: block;
     touch-action: none;
+    transition:
+        width 420ms cubic-bezier(0.22, 0.61, 0.36, 1),
+        height 420ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+/* 入场时四周闪光, 模拟快门 */
+.qr-shot-flash {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    animation: qr-shot-flash-fade 380ms ease-out both;
+}
+
+.qr-shot-flash::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+        ellipse at center,
+        rgba(255, 255, 255, 0) 45%,
+        rgba(255, 255, 255, 0.35) 100%
+    );
+}
+
+.qr-shot-flash-edge {
+    position: absolute;
+    display: block;
+    background: linear-gradient(90deg, transparent, #fff, transparent);
+    filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.9));
+    opacity: 0;
+    animation: qr-shot-flash-sweep 380ms ease-out both;
+}
+
+.edge-top,
+.edge-bottom {
+    left: 0;
+    right: 0;
+    height: 2px;
+    transform: scaleX(0.4);
+}
+
+.edge-left,
+.edge-right {
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: linear-gradient(180deg, transparent, #fff, transparent);
+    transform: scaleY(0.4);
+}
+
+.edge-top {
+    top: 0;
+}
+
+.edge-right {
+    right: 0;
+    animation-delay: 60ms;
+}
+
+.edge-bottom {
+    bottom: 0;
+    animation-delay: 40ms;
+}
+
+.edge-left {
+    left: 0;
+    animation-delay: 20ms;
+}
+
+@keyframes qr-shot-flash-sweep {
+    0% {
+        opacity: 0;
+        transform: scale(0.4);
+    }
+    35% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(1);
+    }
+}
+
+@keyframes qr-shot-flash-fade {
+    0% {
+        opacity: 0;
+    }
+    15% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .qr-shot,
+    .qr-shot-canvas {
+        transition: none;
+    }
+
+    .qr-shot-flash {
+        display: none;
+    }
 }
 
 .qr-shot-toolbar {
