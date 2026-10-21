@@ -19,6 +19,7 @@ export default defineConfig({
     startUrls: [
       'about:newtab',
       'https://en.wikipedia.org/wiki/QR_code',
+      'https://en.wikipedia.org/wiki/Barcode',
       'https://www.deepseek.com/images/app-qrcode.png',
       'https://inftab.com/',
     ],
