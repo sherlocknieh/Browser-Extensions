@@ -18,16 +18,28 @@ export default defineBackground(() => {
     const POPUP_OPEN_GRACE = 1500;
 
     // 打开扩展 popup 窗口
-    // 必须优先用 action.openPopup: Firefox 的 pageAction.openPopup 只允许在用户操作期间调用,
-    // 异步流程(如截图框选完成)中调用会被拒绝; action.openPopup 则没有这个限制
-    const openPopup = () => {
-        type OpenPopupCapable = { openPopup: () => Promise<void> };
-        const action = (browser.action as unknown as OpenPopupCapable | undefined)
-            ?? (browser.pageAction as unknown as OpenPopupCapable | undefined);
-        if (!action?.openPopup) return Promise.reject(new Error('openPopup is unavailable'));
-        return action.openPopup().then(() => {
-            lastPopupOpenAt = Date.now();
-        });
+    // 必须优先用 action.openPopup: Firefox 的 pageAction.openPopup 声明了 requireUserInput,
+    // 异步流程(如截图框选完成)中调用必定被拒绝; action.openPopup 只用
+    // extensions.openPopupWithoutUserGesture.enabled 开关控制(默认开启), 不受手势限制。
+    // 保留 pageAction 兜底, 以防个别构建关闭了该开关。
+    const openPopup = async () => {
+        type OpenPopupCapable = { openPopup?: () => Promise<void> };
+        const candidates = [
+            browser.action as unknown as OpenPopupCapable | undefined,
+            browser.pageAction as unknown as OpenPopupCapable | undefined,
+        ].filter((api): api is OpenPopupCapable => typeof api?.openPopup === 'function');
+
+        let lastError: unknown = new Error('openPopup is unavailable');
+        for (const api of candidates) {
+            try {
+                await api.openPopup!();
+                lastPopupOpenAt = Date.now();
+                return;
+            } catch (error) {
+                lastError = error;
+            }
+        }
+        throw lastError;
     };
 
     // 页面通知先写入存储, 保证 popup 打开后能读到; 已打开的 popup 直接通过长连接推送
