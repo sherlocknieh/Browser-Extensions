@@ -99,6 +99,10 @@
     "message": "Screenshot Scan",
     "description": "Button that switches to screenshot scan after a cross-origin fetch failure"
   },
+  "screenshotRetry": {
+    "message": "Try Screenshot Scan",
+    "description": "Button that retries scanning by capturing the current tab after recognition fails"
+  },
   "screenshotFailed": {
     "message": "Screenshot scan failed",
     "description": "Error title for screenshot operation failure"
@@ -144,7 +148,7 @@
     "description": "Copy button text"
   },
   "recognitionFailedMsg": {
-    "message": "No QR code found, or the image is not clear enough",
+    "message": "No QR code found, or the image is not clear enough.\nTry screenshot to scan a more precise area.",
     "description": "Message shown when screenshot scan fails"
   },
   "recognitionFailed": {

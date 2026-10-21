@@ -299,16 +299,24 @@ async function decodeAndNotify(imageData: ImageData, isStale?: () => boolean) {
         return;
     }
 
-    await notify({
+    const payload: PopupNoticePayload = {
         options: {
             toast: false,
             icon: 'warning',
             title: t('recognitionFailed'),
             text: t('recognitionFailedMsg'),
             confirmButtonText: t('confirm'),
+            extraButtonText: t('screenshotRetry'),
             showCloseButton: true,
         },
-    });
+        extraAction: { kind: 'screenshot' },
+    };
+
+    if (await showPopupNotice(payload)) return;
+
+    // popup 不可用时在页面内展示, 点击"尝试截图识别"直接开始区域截图
+    const response = await fireLocal(payload);
+    if (response.dismiss === 'extra') void handleScreenshot();
 }
 
 // 截取当前标签页可见区域，作为本地图片无法直接读取时的兜底

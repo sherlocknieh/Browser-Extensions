@@ -21,6 +21,7 @@ export interface PopupNoticeOptions {
     showCancelButton?: boolean;
     confirmButtonText?: string;
     cancelButtonText?: string;
+    extraButtonText?: string;
     // 显示加载动画
     loading?: boolean;
 }
@@ -29,6 +30,7 @@ export interface PopupNoticePayload {
     options: PopupNoticeOptions;
     confirmAction?: PopupNoticeAction;
     cancelAction?: PopupNoticeAction;
+    extraAction?: PopupNoticeAction;
 }
 
 export interface PopupNoticeRecord extends PopupNoticePayload {

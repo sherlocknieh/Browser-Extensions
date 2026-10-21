@@ -1,7 +1,7 @@
 import { nextTick, reactive } from 'vue';
 
 export type NotifyIcon = 'info' | 'success' | 'error' | 'warning';
-export type NotifyDismissReason = 'cancel' | 'close' | 'replaced';
+export type NotifyDismissReason = 'cancel' | 'close' | 'extra' | 'replaced';
 
 export interface NotifyOptions {
     toast?: boolean;
@@ -12,6 +12,8 @@ export interface NotifyOptions {
     showCancelButton?: boolean;
     confirmButtonText?: string;
     cancelButtonText?: string;
+    // 额外操作按钮, 点击后以 dismiss: 'extra' 结束通知
+    extraButtonText?: string;
     didOpen?: () => void;
 }
 
@@ -69,6 +71,7 @@ function fire(options: NotifyOptions = {}): Promise<NotifyResult> {
 
 const close = () => finish({ isConfirmed: false, isDismissed: true, dismiss: 'close' });
 const cancel = () => finish({ isConfirmed: false, isDismissed: true, dismiss: 'cancel' });
+const extra = () => finish({ isConfirmed: false, isDismissed: true, dismiss: 'extra' });
 const confirm = () => finish({ isConfirmed: true, isDismissed: false });
 const showLoading = () => {
     if (state.open) state.loading = true;
@@ -80,4 +83,4 @@ export function useNotify() {
 
 // 供通知宿主组件读取状态与回调
 export const notifyState = state;
-export { cancel as cancelNotify, close as closeNotify, confirm as confirmNotify };
+export { cancel as cancelNotify, close as closeNotify, confirm as confirmNotify, extra as extraNotify };

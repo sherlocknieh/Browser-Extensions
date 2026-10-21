@@ -99,6 +99,10 @@
     "message": "改用截图识别",
     "description": "跨域图片获取失败时切换到截图识别的按钮"
   },
+  "screenshotRetry": {
+    "message": "尝试截图识别",
+    "description": "识别失败时改用截图再次识别的按钮"
+  },
   "screenshotFailed": {
     "message": "截图失败",
     "description": "截图操作失败的提示标题"
@@ -144,7 +148,7 @@
     "description": "复制按钮文字"
   },
   "recognitionFailedMsg": {
-    "message": "可能是不支持的码\n也可能是图片不够清晰",
+    "message": "可能是不支持的码\n也可能是图片不够清晰\n可以尝试截图精确选区识别",
     "description": "未识别到二维码或条形码时的提示"
   },
   "recognitionFailed": {

@@ -4,6 +4,7 @@ import {
     cancelNotify,
     closeNotify,
     confirmNotify,
+    extraNotify,
     notifyState,
 } from '@/composables/useNotify';
 
@@ -136,8 +137,21 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
                             >
                                 {{ cancelText }}
                             </button>
-                            <button type="button" class="qr-notify-btn qr-notify-btn--primary" @click="confirmNotify">
+                            <button
+                                type="button"
+                                class="qr-notify-btn"
+                                :class="{ 'qr-notify-btn--primary': !options.extraButtonText }"
+                                @click="confirmNotify"
+                            >
                                 {{ confirmText }}
+                            </button>
+                            <button
+                                v-if="options.extraButtonText"
+                                type="button"
+                                class="qr-notify-btn qr-notify-btn--primary"
+                                @click="extraNotify"
+                            >
+                                {{ options.extraButtonText }}
                             </button>
                         </div>
                     </div>
@@ -384,6 +398,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
 }
 
 .qr-notify-btn {
+    flex: 1 1 0;
+    max-width: 160px;
     min-width: 92px;
     padding: 8px 16px;
     border: 1px solid #d1d5db;

@@ -68,7 +68,9 @@ export function usePopupNoticeHost() {
                     ? record.confirmAction
                     : response.dismiss === 'cancel'
                         ? record.cancelAction
-                        : undefined;
+                        : response.dismiss === 'extra'
+                            ? record.extraAction
+                            : undefined;
                 await runAction(action);
                 void browser.runtime.sendMessage({ action: 'notificationResolved', id: record.id }).catch(() => {});
                 window.close();
@@ -84,7 +86,9 @@ export function usePopupNoticeHost() {
             ? record.confirmAction
             : response.dismiss === 'cancel'
                 ? record.cancelAction
-                : undefined;
+                : response.dismiss === 'extra'
+                    ? record.extraAction
+                    : undefined;
         await runAction(action);
 
         void browser.runtime.sendMessage({ action: 'notificationResolved', id: record.id }).catch(() => {});

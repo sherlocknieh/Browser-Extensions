@@ -17,6 +17,13 @@ import Result from '@zxing/library/esm/core/Result';
 // SVG 提取像素时的目标尺寸上限，避免超大 SVG 生成大量候选图后占用过多内存。
 const SVG_SCAN_DIMENSION = 512;
 
+// 位图的目标扫描尺寸：小图（如聊天截图、缩略图）中的二维码模块往往只有几个像素，
+// ZXing 难以定位；平滑放大后模块边缘更清晰，识别率明显提升。
+const RASTER_SCAN_DIMENSION = 1000;
+
+// 位图的最大放大倍数。放大过多只会增加内存和耗时，识别率不再提升。
+const RASTER_MAX_UPSCALE = 4;
+
 // 通过后台脚本获取跨域图片，并返回可供识别器使用的 Data URL。
 type ProxyFetcher = (url: string) => Promise<string>;
 
@@ -317,13 +324,13 @@ export async function getImageDataFromImageElement(img: HTMLImageElement): Promi
     }
 
     const isSvg = isSvgSource(img.currentSrc || img.src);
-    const scale = isSvg ? getSvgScale(sourceWidth, sourceHeight) : 1;
+    const scale = isSvg ? getSvgScale(sourceWidth, sourceHeight) : getRasterScale(sourceWidth, sourceHeight);
     canvas.width = Math.max(1, Math.round(sourceWidth * scale));
     canvas.height = Math.max(1, Math.round(sourceHeight * scale));
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    // 放大时保持模块边缘锐利；缩小时启用平滑，避免采样丢失二维码细节。
-    ctx.imageSmoothingEnabled = scale < 1;
+    // 位图放大时用平滑插值补齐模块边缘；SVG 放大保持锐利，缩小时两者都启用平滑。
+    ctx.imageSmoothingEnabled = !isSvg || scale < 1;
     ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     return ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -337,6 +344,13 @@ function getSvgScale(sourceWidth: number, sourceHeight: number): number {
         return SVG_SCAN_DIMENSION / maxDimension;
     }
     return Math.max(1, Math.min(8, Math.floor(SVG_SCAN_DIMENSION / maxDimension)));
+}
+
+// 位图缩放比例：小图平滑放大到目标扫描尺寸，大图保持原样。
+function getRasterScale(sourceWidth: number, sourceHeight: number): number {
+    const maxDimension = Math.max(sourceWidth, sourceHeight);
+    if (maxDimension >= RASTER_SCAN_DIMENSION) return 1;
+    return Math.min(RASTER_MAX_UPSCALE, RASTER_SCAN_DIMENSION / maxDimension);
 }
 
 // 加载 Data URL 图片，并复用统一的 Canvas 像素提取流程。

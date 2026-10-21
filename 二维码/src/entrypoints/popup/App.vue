@@ -133,8 +133,14 @@ async function decodeAndShow(getDataUrl: () => Promise<string>, errorTitle: stri
       title: t('recognitionFailed'),
       text: t('recognitionFailedMsg'),
       confirmButtonText: t('confirm'),
+      extraButtonText: t('screenshotRetry'),
       showCloseButton: true,
     });
+    if (response.dismiss === 'extra') {
+      // 截取当前标签页可见区域重试; popup 不会出现在截图中
+      await decodeAndShow(captureVisibleTab, t('screenshotFailedMsg'));
+      return;
+    }
     if (response.dismiss === 'close') window.close();
     return;
   }
