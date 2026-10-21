@@ -1,13 +1,15 @@
 // Firefox 右键菜单图标
-// 通过 mask 描述图形, 再以 context-fill 填充, 使图标颜色跟随菜单文字:
-// 深色主题为白色, 浅色主题为黑色。Chrome/Edge 不支持菜单图标, 不会使用这里的图标。
+// Firefox 只允许 chrome:// 资源使用 context-fill, 扩展图片会被忽略, 因此改用
+// SVG 内部的 prefers-color-scheme 切换颜色: 深色主题白色, 浅色主题黑色。
+// Chrome/Edge 不支持菜单图标, 不会使用这里的图标。
 
 const icon = (id: string, body: string) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">`
+    + `<style>:root{color:#111827}@media (prefers-color-scheme:dark){:root{color:#f3f4f6}}</style>`
     + `<defs><mask id="${id}" maskUnits="userSpaceOnUse" x="0" y="0" width="16" height="16">`
     + `<rect width="16" height="16" fill="#000"/>`
     + `<g fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${body}</g>`
     + `</mask></defs>`
-    + `<rect width="16" height="16" fill="context-fill" mask="url(#${id})"/>`
+    + `<rect width="16" height="16" fill="currentColor" mask="url(#${id})"/>`
     + `</svg>`;
 
 const MENU_ICONS = {
