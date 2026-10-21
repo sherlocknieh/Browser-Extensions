@@ -4,7 +4,6 @@ import BinaryBitmap from '@zxing/library/esm/core/BinaryBitmap';
 import BitArray from '@zxing/library/esm/core/common/BitArray';
 import DecodeHintType from '@zxing/library/esm/core/DecodeHintType';
 import GlobalHistogramBinarizer from '@zxing/library/esm/core/common/GlobalHistogramBinarizer';
-import HybridBinarizer from '@zxing/library/esm/core/common/HybridBinarizer';
 import NotFoundException from '@zxing/library/esm/core/NotFoundException';
 import Code128Reader from '@zxing/library/esm/core/oned/Code128Reader';
 import Code39Reader from '@zxing/library/esm/core/oned/Code39Reader';
@@ -12,9 +11,9 @@ import Code93Reader from '@zxing/library/esm/core/oned/Code93Reader';
 import ITFReader from '@zxing/library/esm/core/oned/ITFReader';
 import MultiFormatUPCEANReader from '@zxing/library/esm/core/oned/MultiFormatUPCEANReader';
 import OneDReader from '@zxing/library/esm/core/oned/OneDReader';
+import PlanarYUVLuminanceSource from '@zxing/library/esm/core/PlanarYUVLuminanceSource';
 import QRCodeReader from '@zxing/library/esm/core/qrcode/QRCodeReader';
 import Result from '@zxing/library/esm/core/Result';
-import RGBLuminanceSource from '@zxing/library/esm/core/RGBLuminanceSource';
 
 // SVG 提取像素时的目标尺寸上限，避免超大 SVG 生成大量候选图后占用过多内存。
 const SVG_SCAN_DIMENSION = 512;
@@ -67,19 +66,64 @@ export async function loadImageDataFromUrl(imageUrl: string, options: LoadImageO
     return getImageDataFromDataUrl(dataUrl);
 }
 
+// 原图直接交给 jsQR 的像素上限。超过这个尺寸时，全分辨率扫描的代价明显高于
+// 缩小后扫描，直接进入缩小版候选图和 ZXing 兜底（ZXing 仍在原图分辨率上识别，
+// 小尺寸二维码不会因此漏掉）。
+const JSQR_DIRECT_MAX_PIXELS = 4_000_000;
+
 // 尝试识别二维码，并返回二维码中的文本。
 // 先用 jsQR 依次尝试原图、灰度、不同阈值的二值化和圆点增强图；
 // 全部失败时再交给 ZXing，处理拍摄角度大、透视变形的照片。
 export async function decodeQrFromImageData(imageData: ImageData): Promise<string | null> {
-    for (const candidate of createDecodeCandidates(imageData)) {
-        const code = jsQR(candidate.data, candidate.width, candidate.height, {
-            inversionAttempts: 'attemptBoth',
-        });
-        // 少数二值化候选图会产生空内容的误识别，跳过空结果继续尝试。
-        if (code?.data) return code.data;
+    // 原图先直接交给 jsQR: 截图、生成的二维码等常见图片一次命中，无需任何预处理。
+    const isLarge = imageData.width * imageData.height > JSQR_DIRECT_MAX_PIXELS;
+    if (!isLarge) {
+        const direct = decodeWithJsQR(imageData);
+        if (direct) return direct;
     }
 
-    return decodeWithZXing(imageData);
+    // 其余候选图都需要扫描全部像素，大图先缩小再尝试。
+    const scanSource = downscaleToMaxDimension(imageData, QR_SCAN_DIMENSION);
+    const candidates =
+        scanSource === imageData ? createDecodeCandidates(imageData, false) : createDecodeCandidates(scanSource);
+    for (const candidate of candidates) {
+        const text = decodeWithJsQR(candidate);
+        if (text) return text;
+    }
+
+    return decodeWithZXing(toGrayImage(imageData));
+}
+
+// jsQR 单次识别。
+// 少数二值化候选图会产生空内容的误识别，因此空结果继续尝试后续候选图。
+function decodeWithJsQR(imageData: ImageData): string | null {
+    const code = jsQR(imageData.data, imageData.width, imageData.height, {
+        inversionAttempts: 'attemptBoth',
+    });
+    return code?.data || null;
+}
+
+// 逐张候选图识别时的尺寸上限。放大后的小图不受影响，大图缩小后
+// 二维码模块通常仍足够清晰，而单张候选图的扫描耗时与像素数成正比。
+const QR_SCAN_DIMENSION = 1600;
+
+// 灰度图：每像素 1 字节。ZXing 只需要亮度，用灰度数据比 RGBA 少 3/4 内存，
+// 大图反复生成阈值候选图时不容易触发垃圾回收抖动。
+type GrayImage = {
+    data: Uint8ClampedArray;
+    width: number;
+    height: number;
+};
+
+// 按人眼亮度取灰度：绿色权重最高。
+function toGrayImage(imageData: ImageData): GrayImage {
+    const { width, height, data } = imageData;
+    const gray = new Uint8ClampedArray(width * height);
+    for (let index = 0; index < gray.length; index++) {
+        const offset = index * 4;
+        gray[index] = ((data[offset] ?? 0) + (data[offset + 1] ?? 0) * 2 + (data[offset + 2] ?? 0)) >> 2;
+    }
+    return { data: gray, width, height };
 }
 
 // ZXing 识别参数：TRY_HARDER 会尝试更多定位图案组合，用于倾斜、模糊的实拍图片。
@@ -89,13 +133,13 @@ const zxingHints = new Map<DecodeHintType, unknown>([[DecodeHintType.TRY_HARDER,
 // ZXing 的定位点检测和透视校正对倾斜拍摄的照片更宽容，代价是速度稍慢，
 // 因此只作为兜底方案，不影响常规图片的识别速度。
 // 二维码全部失败后，再按一维条形码扫描一遍。
-function decodeWithZXing(imageData: ImageData): string | null {
-    for (const candidate of createZXingCandidates(imageData)) {
+function decodeWithZXing(gray: GrayImage): string | null {
+    for (const candidate of createZXingCandidates(gray)) {
         const text = decodeQrWithZXing(candidate);
         if (text) return text;
     }
 
-    return decodeBarcodeWithZXing(imageData);
+    return decodeBarcodeWithZXing(gray);
 }
 
 // 一维条形码的候选格式。
@@ -148,14 +192,12 @@ const oneDReader = new SupportedOneDReader();
 const BARCODE_SCAN_DIMENSION = 1600;
 
 // 扫描一维条形码：条形码印在平面上，灰度图已足够，无需像二维码那样尝试全部阈值图。
-// 一维读取器会逐行二值化，因此只用 GlobalHistogramBinarizer。
+// 一维读取器会逐行二值化，因此只需要一种二值化方式。
 // 竖拍的条形码在逐行扫描中会变成竖直条纹，因此再补一张顺时针旋转 90 度的图。
-function decodeBarcodeWithZXing(imageData: ImageData): string | null {
-    const grayscale = toGrayscale(imageData, (_red, green) => green);
-    // 逐行扫描的耗时与图片尺寸成正比，先缩小到合适尺寸再识别。
-    const scaled = downscaleToMaxDimension(grayscale, BARCODE_SCAN_DIMENSION);
+function decodeBarcodeWithZXing(gray: GrayImage): string | null {
+    const scaled = downscaleGrayToMaxDimension(gray, BARCODE_SCAN_DIMENSION);
 
-    for (const candidate of [scaled, rotate90(scaled)]) {
+    for (const candidate of [scaled, rotateGray90(scaled)]) {
         const text = decodeOneDWithZXing(candidate);
         if (text) return text;
     }
@@ -163,24 +205,23 @@ function decodeBarcodeWithZXing(imageData: ImageData): string | null {
 }
 
 // 行扫描只处理水平方向，因此一维识别只需要灰度图和一种二值化方式。
-function decodeOneDWithZXing(imageData: ImageData): string | null {
+function decodeOneDWithZXing(gray: GrayImage): string | null {
     try {
-        const bitmap = createZXingBitmap(imageData, GlobalHistogramBinarizer);
-        return oneDReader.decode(bitmap, oneDHints).getText() || null;
+        return oneDReader.decode(createZXingBitmap(gray), oneDHints).getText() || null;
     } catch {
         return null;
     }
 }
 
-// 按整数倍缩小图片，对每个块取平均，避免条形码的细线在缩放中丢失。
-function downscaleToMaxDimension(imageData: ImageData, maxDimension: number): ImageData {
-    const { width, height, data } = imageData;
+// 按整数倍缩小灰度图，对每个块取平均，避免条形码的细线在缩放中丢失。
+function downscaleGrayToMaxDimension(gray: GrayImage, maxDimension: number): GrayImage {
+    const { width, height, data } = gray;
     const factor = Math.ceil(Math.max(width, height) / maxDimension);
-    if (factor <= 1) return imageData;
+    if (factor <= 1) return gray;
 
     const targetWidth = Math.floor(width / factor);
     const targetHeight = Math.floor(height / factor);
-    const output = new Uint8ClampedArray(targetWidth * targetHeight * 4);
+    const output = new Uint8ClampedArray(targetWidth * targetHeight);
     const blockSize = factor * factor;
 
     for (let y = 0; y < targetHeight; y++) {
@@ -189,88 +230,84 @@ function downscaleToMaxDimension(imageData: ImageData, maxDimension: number): Im
             for (let offsetY = 0; offsetY < factor; offsetY++) {
                 const rowStart = (y * factor + offsetY) * width + x * factor;
                 for (let offsetX = 0; offsetX < factor; offsetX++) {
-                    sum += data[(rowStart + offsetX) * 4] ?? 0;
+                    sum += data[rowStart + offsetX] ?? 0;
                 }
             }
-            const value = sum / blockSize;
-            const target = (y * targetWidth + x) * 4;
-            output[target] = value;
-            output[target + 1] = value;
-            output[target + 2] = value;
-            output[target + 3] = 255;
+            output[y * targetWidth + x] = sum / blockSize;
         }
     }
 
-    return new ImageData(output, targetWidth, targetHeight);
+    return { data: output, width: targetWidth, height: targetHeight };
 }
 
 // 顺时针旋转 90 度，交换宽高。
-function rotate90(imageData: ImageData): ImageData {
-    const { width, height, data } = imageData;
+function rotateGray90(gray: GrayImage): GrayImage {
+    const { width, height, data } = gray;
     const output = new Uint8ClampedArray(data.length);
 
     for (let y = 0; y < height; y++) {
         for (let x = 0; x < width; x++) {
-            const source = (y * width + x) * 4;
-            const targetX = height - 1 - y;
-            const targetY = x;
-            const target = (targetY * height + targetX) * 4;
-            output.set(data.subarray(source, source + 4), target);
+            output[x * height + (height - 1 - y)] = data[y * width + x] ?? 0;
         }
     }
 
-    return new ImageData(output, height, width);
+    return { data: output, width: height, height: width };
 }
 
-// 用两种二值化方式识别同一张候选图：全局直方图适合亮度整体均匀的屏幕照片，
-// 局部自适应阈值适合明暗差异较大的实拍场景。
-function decodeQrWithZXing(imageData: ImageData): string | null {
-    for (const Binarizer of [GlobalHistogramBinarizer, HybridBinarizer]) {
-        try {
-            const text = qrReader.decode(createZXingBitmap(imageData, Binarizer), zxingHints).getText();
-            // 空白内容视为未识别，继续尝试其他候选图。
-            if (text) return text;
-        } catch {
-            // 换一种二值化方式继续尝试。
-        }
+// 用 ZXing 识别单一灰度候选图。
+// 全局直方图二值化在实测中覆盖了屏幕照片和明暗不均的实拍场景，
+// 局部自适应阈值(另一种二值化)没有额外的成功率收益，因此只用一种。
+function decodeQrWithZXing(gray: GrayImage): string | null {
+    try {
+        return qrReader.decode(createZXingBitmap(gray), zxingHints).getText() || null;
+    } catch {
+        return null;
     }
-    return null;
 }
 
-// 将 RGBA 图片转换为 ZXing 的亮度源，并按需套上二值化器。
-function createZXingBitmap(
-    imageData: ImageData,
-    Binarizer: typeof GlobalHistogramBinarizer | typeof HybridBinarizer,
-): BinaryBitmap {
-    const { width, height, data } = imageData;
-    const luminances = new Int32Array(width * height);
-    for (let index = 0; index < luminances.length; index++) {
-        const offset = index * 4;
-        luminances[index] =
-            ((data[offset] ?? 0) << 16) | ((data[offset + 1] ?? 0) << 8) | (data[offset + 2] ?? 0);
-    }
+// 灰度图直接作为 Y 平面交给 ZXing，不需要再复制成亮度数组。
+function createZXingBitmap(gray: GrayImage): BinaryBitmap {
+    const { data, width, height } = gray;
+    const source = new PlanarYUVLuminanceSource(data, width, height, 0, 0, width, height, false);
+    return new BinaryBitmap(new GlobalHistogramBinarizer(source));
+}
 
-    return new BinaryBitmap(new Binarizer(new RGBLuminanceSource(luminances, width, height)));
+// 生成灰度阈值图，深色像素变黑，其他变白。
+function thresholdGray(gray: GrayImage, threshold: number): GrayImage {
+    const data = new Uint8ClampedArray(gray.data.length);
+    for (let index = 0; index < data.length; index++) {
+        data[index] = (gray.data[index] ?? 0) < threshold ? 0 : 255;
+    }
+    return { data, width: gray.width, height: gray.height };
+}
+
+// 生成反色灰度图，用于识别白码黑底的二维码。
+function invertGray(gray: GrayImage): GrayImage {
+    const data = new Uint8ClampedArray(gray.data.length);
+    for (let index = 0; index < data.length; index++) {
+        data[index] = 255 - (gray.data[index] ?? 0);
+    }
+    return { data, width: gray.width, height: gray.height };
 }
 
 // ZXing 的候选图：灰度图加上多个阈值二值化图。
 // 拍摄发光的屏幕或广告牌时二维码往往过曝，用较高阈值能保留亮部区域的黑白对比；
 // 最后附上反色图，兼容白码黑底的二维码。
-function* createZXingCandidates(imageData: ImageData): Generator<ImageData> {
-    const grayscale = toGrayscale(imageData, (_red, green) => green);
-    yield grayscale;
+// 阈值按命中概率排序，实拍照片通常在 192 就能识别，后续候选图很少被生成。
+function* createZXingCandidates(gray: GrayImage): Generator<GrayImage> {
+    yield gray;
 
-    for (const threshold of [192, 224, 160, 208, 128, 96]) {
-        yield thresholdImage(grayscale, threshold);
+    for (const threshold of [192, 224, 160, 128, 96]) {
+        yield thresholdGray(gray, threshold);
     }
 
-    yield invertImage(grayscale);
+    yield invertGray(gray);
 }
 
 // 按需生成识别候选图像，共 5 张，兼顾成功率和识别速度。
 // 使用生成器可以在识别成功后立即停止，避免提前构建后续候选图。
-function* createDecodeCandidates(imageData: ImageData): Generator<ImageData> {
-    yield imageData;
+function* createDecodeCandidates(imageData: ImageData, includeOriginal = true): Generator<ImageData> {
+    if (includeOriginal) yield imageData;
 
     // 绿色通道最接近人眼亮度感知，用它转灰度可兼容彩色二维码和彩色背景。
     const grayscale = toGrayscale(imageData, (_red, green) => green);
@@ -316,19 +353,38 @@ function thresholdImage(imageData: ImageData, threshold: number): ImageData {
     return new ImageData(data, imageData.width, imageData.height);
 }
 
-// 生成反色图，用于识别白码黑底的二维码。
-function invertImage(imageData: ImageData): ImageData {
-    const data = new Uint8ClampedArray(imageData.data.length);
-    for (let index = 0; index < imageData.data.length; index += 4) {
-        const value = 255 - imageData.data[index];
-        data[index] = value;
-        data[index + 1] = value;
-        data[index + 2] = value;
-        data[index + 3] = imageData.data[index + 3];
-    }
-    return new ImageData(data, imageData.width, imageData.height);
-}
+// 按整数倍缩小图片，对每个块取绿色通道平均值（最接近人眼亮度）。
+// 缩小后二维码模块仍然清晰，但 jsQR 的扫描耗时与像素数成正比。
+function downscaleToMaxDimension(imageData: ImageData, maxDimension: number): ImageData {
+    const { width, height, data } = imageData;
+    const factor = Math.ceil(Math.max(width, height) / maxDimension);
+    if (factor <= 1) return imageData;
 
+    const targetWidth = Math.floor(width / factor);
+    const targetHeight = Math.floor(height / factor);
+    const output = new Uint8ClampedArray(targetWidth * targetHeight * 4);
+    const blockSize = factor * factor;
+
+    for (let y = 0; y < targetHeight; y++) {
+        for (let x = 0; x < targetWidth; x++) {
+            let sum = 0;
+            for (let offsetY = 0; offsetY < factor; offsetY++) {
+                const rowStart = (y * factor + offsetY) * width + x * factor;
+                for (let offsetX = 0; offsetX < factor; offsetX++) {
+                    sum += data[(rowStart + offsetX) * 4 + 1] ?? 0;
+                }
+            }
+            const value = sum / blockSize;
+            const target = (y * targetWidth + x) * 4;
+            output[target] = value;
+            output[target + 1] = value;
+            output[target + 2] = value;
+            output[target + 3] = 255;
+        }
+    }
+
+    return new ImageData(output, targetWidth, targetHeight);
+}
 // 对黑色像素进行方形邻域膨胀。
 // 该处理只用于额外候选图，不会修改原始图片，可修复圆点模块过于分散导致的定位失败。
 function dilateBlackPixels(imageData: ImageData, radius: number): ImageData {
