@@ -75,9 +75,21 @@
     "message": "跨域图片，数据获取可能稍慢",
     "description": "跨域获取图片时的提示"
   },
+  "openImage": {
+    "message": "新标签打开图片",
+    "description": "跨域图片加载提示中的按钮：在新标签页打开图片"
+  },
   "proxyFetchFailed": {
     "message": "代理获取失败",
     "description": "后台代理获取失败时的提示"
+  },
+  "crossOriginScreenshotHint": {
+    "message": "可以改用截图识别: 右键选择「截图识别二维码/条形码」, 或点击下方按钮。",
+    "description": "跨域图片获取失败时建议改用截图识别的提示"
+  },
+  "screenshotScan": {
+    "message": "改用截图识别",
+    "description": "跨域图片获取失败时切换到截图识别的按钮"
   },
   "screenshotFailed": {
     "message": "截图失败",

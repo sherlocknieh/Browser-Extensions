@@ -75,9 +75,21 @@
     "message": "Cross-origin image; this may take a moment",
     "description": "Notice for slower cross-origin fetch"
   },
+  "openImage": {
+    "message": "Open image in new tab",
+    "description": "Button in the cross-origin loading notice that opens the image in a new tab"
+  },
   "proxyFetchFailed": {
     "message": "Proxy fetch failed",
     "description": "Error when background proxy fetch fails"
+  },
+  "crossOriginScreenshotHint": {
+    "message": "Try screenshot recognition instead: right-click and choose \"Take a Screenshot to Scan QR Code or Barcode\", or click the button below.",
+    "description": "Hint suggesting screenshot recognition when a cross-origin image cannot be fetched"
+  },
+  "screenshotScan": {
+    "message": "Use a screenshot instead",
+    "description": "Button that switches to screenshot recognition after a cross-origin fetch failure"
   },
   "screenshotFailed": {
     "message": "Screenshot failed",

@@ -71,19 +71,22 @@ export type DecodeResult = {
     kind: 'qr' | 'barcode';
 };
 
-// 尝试识别二维码，失败后再兜底识别一维条形码。
-// 识别全部交给 ZXing：依次尝试灰度图和不同阈值的二值化图，
+// 优先识别一维条形码，失败后再按二维码识别。
+// 条形码只需在缩小后的灰度图上逐行扫描，命中时比二维码的多阈值候选图更快；
+// 二维码的识别全部交给 ZXing：依次尝试灰度图和不同阈值的二值化图，
 // 兼顾过曝、低对比度、圆点模块和白码黑底等情况。
 export async function decodeQrFromImageData(imageData: ImageData): Promise<DecodeResult | null> {
     const gray = toGrayImage(imageData);
+
+    const barcode = decodeBarcodeWithZXing(gray);
+    if (barcode) return { text: barcode, kind: 'barcode' };
 
     for (const candidate of createQrCandidates(gray)) {
         const text = decodeQrWithZXing(candidate);
         if (text) return { text, kind: 'qr' };
     }
 
-    const barcode = decodeBarcodeWithZXing(gray);
-    return barcode ? { text: barcode, kind: 'barcode' } : null;
+    return null;
 }
 
 // 灰度图：每像素 1 字节。ZXing 只需要亮度，用灰度数据比 RGBA 少 3/4 内存，

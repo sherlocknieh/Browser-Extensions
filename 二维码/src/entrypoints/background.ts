@@ -235,6 +235,17 @@ export default defineBackground(() => {
                 .catch(error => sendResponse({ success: false, error: error?.message ?? String(error) }));
             return true;
         }
+        // popup 点击"改用截图识别"后, 让当前页面的内容脚本开始区域截图
+        if (request.action === "requestScreenshot") {
+            browser.tabs.query({ active: true, currentWindow: true })
+                .then(([tab]) => {
+                    if (tab?.id == null) throw new Error('No active tab.');
+                    return browser.tabs.sendMessage(tab.id, { action: "screenshotQR" });
+                })
+                .then(() => sendResponse({ success: true }))
+                .catch(() => sendResponse({ success: false }));
+            return true;
+        }
         // 跨域获取图片数据
         if (request.action === "fetchImage") {
             fetch(request.url)                       // 请求图片资源

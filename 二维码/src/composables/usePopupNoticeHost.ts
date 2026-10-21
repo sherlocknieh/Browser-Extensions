@@ -19,6 +19,15 @@ export function usePopupNoticeHost() {
 
     async function runAction(action?: PopupNoticeAction) {
         if (!action) return;
+        if (action.kind === 'screenshot') {
+            // popup 随后会被关闭, 由后台转告内容脚本开始区域截图
+            try {
+                await browser.runtime.sendMessage({ action: 'requestScreenshot' });
+            } catch {
+                // 页面不支持截图时保持安静, 避免再叠一层通知
+            }
+            return;
+        }
         if (action.kind === 'open') {
             window.open(toOpenableUrl(action.value), '_blank');
             return;
@@ -37,14 +46,23 @@ export function usePopupNoticeHost() {
 
         const { loading, ...options } = record.options;
         if (loading) {
-            // fire 会被后续结果通知替换; 用户若关闭通知则直接收起 popup
+            // fire 会被后续结果通知替换; 用户点击按钮或关闭通知时收起 popup
             void fire({
                 ...options,
                 didOpen: loading ? () => showLoading() : undefined,
-            }).then((response) => {
+            }).then(async (response) => {
                 if (activeId !== record.id) return;
                 activeId = null;
-                if (response.dismiss === 'close') window.close();
+                // 被后续通知替换时保持 popup 打开, 由新通知继续接管
+                if (response.dismiss === 'replaced') return;
+                const action = response.isConfirmed
+                    ? record.confirmAction
+                    : response.dismiss === 'cancel'
+                        ? record.cancelAction
+                        : undefined;
+                await runAction(action);
+                void browser.runtime.sendMessage({ action: 'notificationResolved', id: record.id }).catch(() => {});
+                window.close();
             });
             return;
         }

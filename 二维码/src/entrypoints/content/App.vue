@@ -115,21 +115,44 @@ onBeforeUnmount(() => {
 });
 
 
+// 跨域图片加载期间的提示，提供"新标签打开图片"和"改用截图识别"两个出口。
+// 通知被后续识别结果替换时自动结束，无需用户操作。
+async function notifyCrossOriginLoading(imageUrl: string) {
+    const payload: PopupNoticePayload = {
+        options: {
+            toast: false,
+            icon: 'info',
+            title: t('fetchingImage'),
+            text: t('crossOriginNotice'),
+            showCancelButton: true,
+            cancelButtonText: t('openImage'),
+            confirmButtonText: t('screenshotScan'),
+            showCloseButton: true,
+            loading: true,
+        },
+        cancelAction: { kind: 'open', value: imageUrl },
+        confirmAction: { kind: 'screenshot' },
+    };
+
+    if (await showPopupNotice(payload)) return;
+
+    // popup 不可用时在页面内展示并处理两个按钮
+    const response = await fireLocal(payload);
+    if (response.isConfirmed) {
+        void handleScreenshot();
+    } else if (response.dismiss === 'cancel') {
+        window.open(imageUrl, '_blank');
+    }
+}
+
 // 网页图片处理流程
 async function handleImageUrl(imageUrl: string) {
     const origin = window.location.origin;
     const needsProxy = !isSameOrigin(imageUrl, origin);
+    // 记录当前识别轮次: 用户改用截图识别后, 本次图片识别的后续通知全部丢弃
+    const epoch = screenshotEpoch;
     if (needsProxy) {
-        await notify({
-            options: {
-                toast: true,
-                icon: 'info',
-                title: t('fetchingImage'),
-                text: t('crossOriginNotice'),
-                showCloseButton: true,
-                loading: true,
-            },
-        });
+        void notifyCrossOriginLoading(imageUrl);
     }
 
     try {
@@ -137,20 +160,42 @@ async function handleImageUrl(imageUrl: string) {
             origin,
             fetchViaProxy: needsProxy ? fetchImageViaProxy : undefined,
         });
-        await decodeAndNotify(imageData);
+        await decodeAndNotify(imageData, () => epoch !== screenshotEpoch);
     } catch (error) {
+        if (epoch !== screenshotEpoch) return;
         // 本地文件在部分浏览器中会因 canvas 安全限制无法读取像素，
         // 此时退回截取当前标签页(直接打开的图片会完整显示在视口中)。
         if (imageUrl.startsWith('file:') && window.location.protocol === 'file:') {
             try {
                 const dataUrl = await captureVisibleTab();
-                await decodeAndNotify(await getImageDataFromDataUrl(dataUrl));
+                await decodeAndNotify(await getImageDataFromDataUrl(dataUrl), () => epoch !== screenshotEpoch);
                 return;
             } catch {
                 // 截图也失败时继续展示原始错误
             }
         }
         const message = error instanceof Error ? error.message : String(error);
+
+        // 跨域图片常因防盗链无法获取, 此时建议并直接切换到截图识别
+        if (needsProxy) {
+            const payload: PopupNoticePayload = {
+                options: {
+                    toast: false,
+                    icon: 'warning',
+                    title: t('imageFetchFailed'),
+                    text: `${message}\n${t('crossOriginScreenshotHint')}`,
+                    confirmButtonText: t('screenshotScan'),
+                    showCloseButton: true,
+                },
+                confirmAction: { kind: 'screenshot' },
+            };
+
+            if (await showPopupNotice(payload)) return;
+            const response = await fireLocal(payload);
+            if (response.isConfirmed) await handleScreenshot();
+            return;
+        }
+
         await notify({
             options: {
                 toast: true,
@@ -207,7 +252,11 @@ function isScreenshotResult(error: unknown): error is ScreenshotResult {
     );
 }
 
+// 截图识别每轮开始都会递增, 用于判断图片识别的结果是否已过期
+let screenshotEpoch = 0;
+
 async function handleScreenshot() {
+    screenshotEpoch++;
     try {
         const base64 = await startScreenshot();
         const imageData = await getImageDataFromDataUrl(base64);
@@ -230,8 +279,10 @@ async function handleScreenshot() {
     }
 }
 
-// 解码过程+通知流程
-async function decodeAndNotify(imageData: ImageData) {
+// 解码过程+通知流程; isStale 用于丢弃已被截图识别取代的过期结果
+async function decodeAndNotify(imageData: ImageData, isStale?: () => boolean) {
+    if (isStale?.()) return;
+
     // 显示正在识别的通知
     await notify({
         options: {
@@ -248,6 +299,7 @@ async function decodeAndNotify(imageData: ImageData) {
 
     // 调用二维码识别函数，获取识别结果
     const result = await decodeQrFromImageData(imageData);
+    if (isStale?.()) return;
 
     if (result) {
         // 文字结果没有可打开的链接, 只提供复制操作
