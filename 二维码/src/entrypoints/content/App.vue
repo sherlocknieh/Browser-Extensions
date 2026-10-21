@@ -7,6 +7,7 @@ import {
     getImageDataFromDataUrl,
     isSameOrigin,
     loadImageDataFromUrl,
+    type DecodeResult,
 } from '@/services/qrScanner';
 import { isLinkText, toOpenableUrl } from '@/services/linkText';
 
@@ -42,23 +43,23 @@ async function notify(payload: PopupNoticePayload): Promise<boolean> {
 }
 
 // 识别结果需要用户选择, popup 可用时由 popup 直接完成打开/复制
-async function notifyResult(result: string) {
-    const isLink = isLinkText(result);
+async function notifyResult(result: DecodeResult) {
+    const isLink = isLinkText(result.text);
     const payload: PopupNoticePayload = {
         options: {
             toast: false,
             icon: 'success',
-            title: t('recognitionSuccess'),
-            text: result,
+            title: t(result.kind === 'barcode' ? 'barcodeScanSuccess' : 'recognitionSuccess'),
+            text: result.text,
             showCancelButton: isLink,
             confirmButtonText: isLink ? t('openLink') : t('copyContent'),
             cancelButtonText: isLink ? t('copyLink') : undefined,
             showCloseButton: true,
         },
         confirmAction: isLink
-            ? { kind: 'open', value: result }
-            : { kind: 'copy', value: result },
-        cancelAction: isLink ? { kind: 'copy', value: result } : undefined,
+            ? { kind: 'open', value: result.text }
+            : { kind: 'copy', value: result.text },
+        cancelAction: isLink ? { kind: 'copy', value: result.text } : undefined,
     };
 
     if (await showPopupNotice(payload)) return;
@@ -68,17 +69,17 @@ async function notifyResult(result: string) {
 
     if (isLink) {
         if (response.isConfirmed) {
-            window.open(toOpenableUrl(result), '_blank');
+            window.open(toOpenableUrl(result.text), '_blank');
             return;
         }
         if (response.dismiss === 'cancel') {
-            await navigator.clipboard.writeText(result);
+            await navigator.clipboard.writeText(result.text);
         }
         return;
     }
 
     if (response.isConfirmed) {
-        await navigator.clipboard.writeText(result);
+        await navigator.clipboard.writeText(result.text);
     }
 }
 

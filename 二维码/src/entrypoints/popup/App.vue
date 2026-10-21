@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { nextTick, onMounted, ref } from 'vue';
 import qrcode from 'qrcode-generator';
-import { decodeQrFromImageData, getImageDataFromDataUrl } from '@/services/qrScanner';
+import { decodeQrFromImageData, getImageDataFromDataUrl, type DecodeResult } from '@/services/qrScanner';
 import { isLinkText, toOpenableUrl } from '@/services/linkText';
 import { useNotify, notifyState } from '@/composables/useNotify';
 import { usePopupNoticeHost } from '@/composables/usePopupNoticeHost';
@@ -120,25 +120,27 @@ async function decodeAndShow(getDataUrl: () => Promise<string>, errorTitle: stri
   });
   await new Promise((resolve) => setTimeout(resolve, 50));
 
-  let result: string | null;
+  let result: DecodeResult | null;
   try {
     const imageData = await getImageDataFromDataUrl(await getDataUrl());
     result = await decodeQrFromImageData(imageData);
   } catch (error) {
     close();
-    fire({
+    const response = await fire({
       toast: true,
       icon: 'error',
       title: errorTitle,
       text: error instanceof Error ? error.message : String(error),
       showCloseButton: true,
     });
+    // 结果通知关闭后 popup 已无内容, 点关闭按钮时一并收起窗口
+    if (response.dismiss === 'close') window.close();
     return;
   }
 
   close();
   if (!result) {
-    await fire({
+    const response = await fire({
       toast: false,
       icon: 'warning',
       title: t('recognitionFailed'),
@@ -146,36 +148,43 @@ async function decodeAndShow(getDataUrl: () => Promise<string>, errorTitle: stri
       confirmButtonText: t('confirm'),
       showCloseButton: true,
     });
+    if (response.dismiss === 'close') window.close();
     return;
   }
 
   // 文字结果没有可打开的链接, 只提供复制操作
-  const isLink = isLinkText(result);
+  const isLink = isLinkText(result.text);
 
   const response = await fire({
     toast: false,
     icon: 'success',
-    title: t('recognitionSuccess'),
-    text: result,
+    title: t(result.kind === 'barcode' ? 'barcodeScanSuccess' : 'recognitionSuccess'),
+    text: result.text,
     showCancelButton: isLink,
     confirmButtonText: isLink ? t('openLink') : t('copyContent'),
     cancelButtonText: isLink ? t('copyLink') : undefined,
     showCloseButton: true,
   });
 
+  // popup 本身就是通知窗口, 点关闭按钮时只关闭通知会留下空白窗口, 因此一并收起
+  if (response.dismiss === 'close') {
+    window.close();
+    return;
+  }
+
   if (isLink) {
     if (response.isConfirmed) {
-      window.open(toOpenableUrl(result), '_blank');
+      window.open(toOpenableUrl(result.text), '_blank');
       return;
     }
     if (response.dismiss === 'cancel') {
-      await navigator.clipboard.writeText(result);
+      await navigator.clipboard.writeText(result.text);
     }
     return;
   }
 
   if (response.isConfirmed) {
-    await navigator.clipboard.writeText(result);
+    await navigator.clipboard.writeText(result.text);
   }
 }
 

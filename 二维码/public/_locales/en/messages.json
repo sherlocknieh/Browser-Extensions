@@ -47,6 +47,10 @@
     "message": "Scan Success",
     "description": "Success dialog title"
   },
+  "barcodeScanSuccess": {
+    "message": "Barcode scan success",
+    "description": "Success dialog title when a barcode is detected"
+  },
   "openLink": {
     "message": "Open link",
     "description": "Button to open the link"

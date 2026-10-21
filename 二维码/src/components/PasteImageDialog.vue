@@ -209,7 +209,7 @@ async function scanQRCode() {
         const imageData = await getImageData();
         const code = await decodeQrFromImageData(imageData);
         if (code) {
-            showSuccess(code);
+            showSuccess(code.text);
         } else {
             showError(t('recognitionFailedMsg'));
         }

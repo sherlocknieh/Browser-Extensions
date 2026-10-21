@@ -47,6 +47,10 @@
     "message": "识别成功",
     "description": "成功对话框标题"
   },
+  "barcodeScanSuccess": {
+    "message": "条形码扫描成功",
+    "description": "识别到条形码时的成功对话框标题"
+  },
   "openLink": {
     "message": "打开链接",
     "description": "打开链接按钮"
