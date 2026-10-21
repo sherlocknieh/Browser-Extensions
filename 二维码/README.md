@@ -57,6 +57,6 @@
 
 - 跨浏览器开发: wxt + vue3
 - 二维码生成: qrcode-generator
-- 二维码/条形码识别: zxing-js (倾斜透视变形, 一维条形码)
+- 二维码识别: ~~jsQR~~ (换为 zxing-js, 识别率更高且支持条形码)
 - 网页截图: ~~js-web-screen-shot~~ 本地重写的截图组件
 - 弹窗通知: ~~SweetAlert2~~ 本地重写的通知组件
