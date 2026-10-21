@@ -1,4 +1,3 @@
-import jsQR from 'jsqr';
 import BarcodeFormat from '@zxing/library/esm/core/BarcodeFormat';
 import BinaryBitmap from '@zxing/library/esm/core/BinaryBitmap';
 import BitArray from '@zxing/library/esm/core/common/BitArray';
@@ -66,46 +65,19 @@ export async function loadImageDataFromUrl(imageUrl: string, options: LoadImageO
     return getImageDataFromDataUrl(dataUrl);
 }
 
-// 原图直接交给 jsQR 的像素上限。超过这个尺寸时，全分辨率扫描的代价明显高于
-// 缩小后扫描，直接进入缩小版候选图和 ZXing 兜底（ZXing 仍在原图分辨率上识别，
-// 小尺寸二维码不会因此漏掉）。
-const JSQR_DIRECT_MAX_PIXELS = 4_000_000;
-
 // 尝试识别二维码，并返回二维码中的文本。
-// 先用 jsQR 依次尝试原图、灰度、不同阈值的二值化和圆点增强图；
-// 全部失败时再交给 ZXing，处理拍摄角度大、透视变形的照片。
+// 识别全部交给 ZXing：依次尝试灰度图和不同阈值的二值化图，
+// 兼顾过曝、低对比度、圆点模块和白码黑底等情况。
 export async function decodeQrFromImageData(imageData: ImageData): Promise<string | null> {
-    // 原图先直接交给 jsQR: 截图、生成的二维码等常见图片一次命中，无需任何预处理。
-    const isLarge = imageData.width * imageData.height > JSQR_DIRECT_MAX_PIXELS;
-    if (!isLarge) {
-        const direct = decodeWithJsQR(imageData);
-        if (direct) return direct;
-    }
+    const gray = toGrayImage(imageData);
 
-    // 其余候选图都需要扫描全部像素，大图先缩小再尝试。
-    const scanSource = downscaleToMaxDimension(imageData, QR_SCAN_DIMENSION);
-    const candidates =
-        scanSource === imageData ? createDecodeCandidates(imageData, false) : createDecodeCandidates(scanSource);
-    for (const candidate of candidates) {
-        const text = decodeWithJsQR(candidate);
+    for (const candidate of createQrCandidates(gray)) {
+        const text = decodeQrWithZXing(candidate);
         if (text) return text;
     }
 
-    return decodeWithZXing(toGrayImage(imageData));
+    return decodeBarcodeWithZXing(gray);
 }
-
-// jsQR 单次识别。
-// 少数二值化候选图会产生空内容的误识别，因此空结果继续尝试后续候选图。
-function decodeWithJsQR(imageData: ImageData): string | null {
-    const code = jsQR(imageData.data, imageData.width, imageData.height, {
-        inversionAttempts: 'attemptBoth',
-    });
-    return code?.data || null;
-}
-
-// 逐张候选图识别时的尺寸上限。放大后的小图不受影响，大图缩小后
-// 二维码模块通常仍足够清晰，而单张候选图的扫描耗时与像素数成正比。
-const QR_SCAN_DIMENSION = 1600;
 
 // 灰度图：每像素 1 字节。ZXing 只需要亮度，用灰度数据比 RGBA 少 3/4 内存，
 // 大图反复生成阈值候选图时不容易触发垃圾回收抖动。
@@ -128,19 +100,6 @@ function toGrayImage(imageData: ImageData): GrayImage {
 
 // ZXing 识别参数：TRY_HARDER 会尝试更多定位图案组合，用于倾斜、模糊的实拍图片。
 const zxingHints = new Map<DecodeHintType, unknown>([[DecodeHintType.TRY_HARDER, true]]);
-
-// jsQR 找不到定位图案时改用 ZXing。
-// ZXing 的定位点检测和透视校正对倾斜拍摄的照片更宽容，代价是速度稍慢，
-// 因此只作为兜底方案，不影响常规图片的识别速度。
-// 二维码全部失败后，再按一维条形码扫描一遍。
-function decodeWithZXing(gray: GrayImage): string | null {
-    for (const candidate of createZXingCandidates(gray)) {
-        const text = decodeQrWithZXing(candidate);
-        if (text) return text;
-    }
-
-    return decodeBarcodeWithZXing(gray);
-}
 
 // 一维条形码的候选格式。
 // 不使用 MultiFormatOneDReader：它会连带打包尚未完善的 RSS 系列读取器，
@@ -255,8 +214,6 @@ function rotateGray90(gray: GrayImage): GrayImage {
 }
 
 // 用 ZXing 识别单一灰度候选图。
-// 全局直方图二值化在实测中覆盖了屏幕照片和明暗不均的实拍场景，
-// 局部自适应阈值(另一种二值化)没有额外的成功率收益，因此只用一种。
 function decodeQrWithZXing(gray: GrayImage): string | null {
     try {
         return qrReader.decode(createZXingBitmap(gray), zxingHints).getText() || null;
@@ -290,111 +247,15 @@ function invertGray(gray: GrayImage): GrayImage {
     return { data, width: gray.width, height: gray.height };
 }
 
-// ZXing 的候选图：灰度图加上多个阈值二值化图。
-// 拍摄发光的屏幕或广告牌时二维码往往过曝，用较高阈值能保留亮部区域的黑白对比；
-// 最后附上反色图，兼容白码黑底的二维码。
-// 阈值按命中概率排序，实拍照片通常在 192 就能识别，后续候选图很少被生成。
-function* createZXingCandidates(gray: GrayImage): Generator<GrayImage> {
-    yield gray;
-
-    for (const threshold of [192, 224, 160, 128, 96]) {
-        yield thresholdGray(gray, threshold);
-    }
-
-    yield invertGray(gray);
-}
-
-// 按需生成识别候选图像，共 5 张，兼顾成功率和识别速度。
-// 使用生成器可以在识别成功后立即停止，避免提前构建后续候选图。
-function* createDecodeCandidates(imageData: ImageData, includeOriginal = true): Generator<ImageData> {
-    if (includeOriginal) yield imageData;
-
-    // 绿色通道最接近人眼亮度感知，用它转灰度可兼容彩色二维码和彩色背景。
-    const grayscale = toGrayscale(imageData, (_red, green) => green);
-    yield grayscale;
-
-    // 两个阈值覆盖偏暗和偏亮的图片，适应亮度不均、压缩失真和低对比度的情况。
-    for (const threshold of [96, 160]) {
-        yield thresholdImage(grayscale, threshold);
-    }
-
-    // 圆点型二维码的模块之间有间隙，轻微膨胀黑色像素可帮助 jsQR
-    // 连接模块并识别定位点。
-    yield dilateBlackPixels(thresholdImage(grayscale, 128), 1);
-}
-
-// 将指定颜色通道转换为灰度图，同时保留原始透明度。
-function toGrayscale(
-    imageData: ImageData,
-    channel: (red: number, green: number, blue: number) => number,
-): ImageData {
-    const data = new Uint8ClampedArray(imageData.data.length);
-    for (let index = 0; index < imageData.data.length; index += 4) {
-        const value = channel(imageData.data[index], imageData.data[index + 1], imageData.data[index + 2]);
-        data[index] = value;
-        data[index + 1] = value;
-        data[index + 2] = value;
-        data[index + 3] = imageData.data[index + 3];
-    }
-    return new ImageData(data, imageData.width, imageData.height);
-}
-
-// 根据阈值生成纯黑白图。
-// 深色像素变为黑色，其他像素变为白色，便于 jsQR 分析二维码模块边界。
-function thresholdImage(imageData: ImageData, threshold: number): ImageData {
-    const data = new Uint8ClampedArray(imageData.data.length);
-    for (let index = 0; index < imageData.data.length; index += 4) {
-        const value = imageData.data[index] < threshold ? 0 : 255;
-        data[index] = value;
-        data[index + 1] = value;
-        data[index + 2] = value;
-        data[index + 3] = imageData.data[index + 3];
-    }
-    return new ImageData(data, imageData.width, imageData.height);
-}
-
-// 按整数倍缩小图片，对每个块取绿色通道平均值（最接近人眼亮度）。
-// 缩小后二维码模块仍然清晰，但 jsQR 的扫描耗时与像素数成正比。
-function downscaleToMaxDimension(imageData: ImageData, maxDimension: number): ImageData {
-    const { width, height, data } = imageData;
-    const factor = Math.ceil(Math.max(width, height) / maxDimension);
-    if (factor <= 1) return imageData;
-
-    const targetWidth = Math.floor(width / factor);
-    const targetHeight = Math.floor(height / factor);
-    const output = new Uint8ClampedArray(targetWidth * targetHeight * 4);
-    const blockSize = factor * factor;
-
-    for (let y = 0; y < targetHeight; y++) {
-        for (let x = 0; x < targetWidth; x++) {
-            let sum = 0;
-            for (let offsetY = 0; offsetY < factor; offsetY++) {
-                const rowStart = (y * factor + offsetY) * width + x * factor;
-                for (let offsetX = 0; offsetX < factor; offsetX++) {
-                    sum += data[(rowStart + offsetX) * 4 + 1] ?? 0;
-                }
-            }
-            const value = sum / blockSize;
-            const target = (y * targetWidth + x) * 4;
-            output[target] = value;
-            output[target + 1] = value;
-            output[target + 2] = value;
-            output[target + 3] = 255;
-        }
-    }
-
-    return new ImageData(output, targetWidth, targetHeight);
-}
 // 对黑色像素进行方形邻域膨胀。
-// 该处理只用于额外候选图，不会修改原始图片，可修复圆点模块过于分散导致的定位失败。
-function dilateBlackPixels(imageData: ImageData, radius: number): ImageData {
-    const { width, height, data } = imageData;
+// 圆点型二维码的模块之间有间隙，轻微膨胀可帮助 ZXing 连接模块并识别定位点。
+function dilateBlackPixels(gray: GrayImage, radius: number): GrayImage {
+    const { width, height, data } = gray;
     const output = new Uint8ClampedArray(data);
 
     for (let y = 0; y < height; y++) {
         for (let x = 0; x < width; x++) {
-            const index = (y * width + x) * 4;
-            if (data[index] !== 0) continue;
+            if (data[y * width + x] !== 0) continue;
 
             for (let offsetY = -radius; offsetY <= radius; offsetY++) {
                 const targetY = y + offsetY;
@@ -403,15 +264,31 @@ function dilateBlackPixels(imageData: ImageData, radius: number): ImageData {
                 for (let offsetX = -radius; offsetX <= radius; offsetX++) {
                     const targetX = x + offsetX;
                     if (targetX < 0 || targetX >= width) continue;
-                    output[(targetY * width + targetX) * 4] = 0;
-                    output[(targetY * width + targetX) * 4 + 1] = 0;
-                    output[(targetY * width + targetX) * 4 + 2] = 0;
+                    output[targetY * width + targetX] = 0;
                 }
             }
         }
     }
 
-    return new ImageData(output, width, height);
+    return { data: output, width, height };
+}
+
+// 二维码候选图，按命中概率排序。
+// 普通二维码在灰度图就能识别；拍摄发光的屏幕或广告牌时二维码往往过曝，
+// 用较高阈值能保留亮部区域的黑白对比；反色图兼容白码黑底；
+// 圆点型二维码需要先膨胀再识别。
+function* createQrCandidates(gray: GrayImage): Generator<GrayImage> {
+    yield gray;
+
+    for (const threshold of [192, 160, 128, 96, 224]) {
+        yield thresholdGray(gray, threshold);
+    }
+
+    yield invertGray(gray);
+
+    for (const threshold of [160, 192]) {
+        yield dilateBlackPixels(thresholdGray(gray, threshold), 1);
+    }
 }
 
 // 将 HTMLImageElement 绘制到 Canvas，并提取完整像素数据。
