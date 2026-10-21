@@ -3,7 +3,7 @@
 
 |name     | description         | link |
 |---      |---                  |---   |
-|二维码   | [README](#二维码)   |[Microsoft Edge](https://microsoftedge.microsoft.com/addons/detail/clkjmabfjboobjkemgknlgpjjlhdghbp)|
+|二维码   | [README](./二维码/README.md)   |[Microsoft Edge](https://microsoftedge.microsoft.com/addons/detail/clkjmabfjboobjkemgknlgpjjlhdghbp)|
 |右键搜图 | [README](#右键搜图) |[Microsoft Edge](https://microsoftedge.microsoft.com/addons/detail/ingokbdobdmjedneflejcdidkkafciic)|
 |复制链接文字 | [README](#复制链接文字) |[Microsoft Edge](https://microsoftedge.microsoft.com/addons/detail/ngocdmndigonhmbkjfhmknpbibkdjecn)|
 
