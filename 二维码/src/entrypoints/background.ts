@@ -110,10 +110,28 @@ export default defineBackground(() => {
         void openPopup().catch(() => {});
     };
 
-    // PDF 查看器等页面无法注入内容脚本, 改为由 popup 截取当前视口后识别
-    const showCaptureScan = () => {
-        void storageArea().set({ qrCaptureScan: true });
-        void openPopup().catch(() => {});
+    // 浏览器内置 PDF 阅读器等页面可能无法注入内容脚本, 此时截取当前视口,
+    // 再在新标签页中框选识别
+    const CAPTURE_IMAGE_KEY = 'qrCaptureImage';
+    const showCropScan = async (windowId?: number) => {
+        try {
+            const dataUrl = windowId == null
+                ? await browser.tabs.captureVisibleTab({ format: 'png' })
+                : await browser.tabs.captureVisibleTab(windowId, { format: 'png' });
+            // 截图体积较大, 交给扩展页面读取后立即清除
+            await storageArea().set({ [CAPTURE_IMAGE_KEY]: dataUrl });
+            await browser.tabs.create({ url: browser.runtime.getURL('/capture.html') });
+        } catch (error) {
+            await showPopupNotification({
+                options: {
+                    toast: true,
+                    icon: 'error',
+                    title: browser.i18n.getMessage('screenshotFailed'),
+                    text: error instanceof Error ? error.message : browser.i18n.getMessage('screenshotFailedMsg'),
+                    showCloseButton: true,
+                },
+            });
+        }
     };
 
     // Firefox 支持为菜单项指定自定义图标 (Chrome 不支持, 因此仅在 Firefox 构建中传入);
@@ -230,12 +248,12 @@ export default defineBackground(() => {
                 action: "pasteImageQR"
             });
         } else if (info.menuItemId === "screenshotQR") {
-            // 截图识别二维码: 优先使用内容脚本的区域截图
+            // 截图识别二维码: 优先使用内容脚本的区域截图 (Chrome 的 PDF 页面也能注入);
+            // 内容脚本不可用(如 Firefox 内置 PDF 阅读器)时, 改为截取视口后框选识别
             browser.tabs.sendMessage(tabId, {
                 action: "screenshotQR"
             }).catch(() => {
-                // PDF 查看器等页面没有内容脚本, 回退到截取当前视口
-                showCaptureScan();
+                void showCropScan(tab?.windowId);
             });
         } else if (info.menuItemId === "generateQR_link") {
             // 链接生成二维码

@@ -13,8 +13,6 @@ qrcode.stringToBytes = (s: string) => Array.from(new TextEncoder().encode(s));
 const QR_TEXT_KEY = 'qrCodeText';
 // SVG 等非 HTML 页面无法使用内容脚本弹窗, 由 background 把图片地址写入该键
 const QR_IMAGE_KEY = 'qrImageUrl';
-// PDF 等无法注入内容脚本的页面, 由 background 写入该标记, 改为截取当前视口识别
-const CAPTURE_KEY = 'qrCaptureScan';
 
 // 优先使用内存态的 session 存储, 不可用时回退 local
 const storageArea = () => browser.storage.session ?? browser.storage.local;
@@ -28,10 +26,8 @@ const t = (key: Parameters<typeof browser.i18n.getMessage>[0]) =>
   browser.i18n.getMessage(key) || String(key);
 
 let scanning = false;
-// 扫描期间隐藏二维码占位和 PDF 提示
+// 扫描期间隐藏二维码占位
 const scanActive = ref(false);
-// 当前页面是 PDF 时显示“识别当前视口”入口
-const pdfMode = ref(false);
 // 生成二维码后才显示占位, 避免 popup 打开瞬间先闪一下二维码区域
 const hasQrContent = ref(false);
 
@@ -45,15 +41,6 @@ async function takeStoredImageUrl(): Promise<string> {
     return value;
   }
   return '';
-}
-
-// 读取并清除一次性的布尔标记
-async function takeStoredFlag(key: string): Promise<boolean> {
-  const storage = storageArea();
-  const result = await storage.get(key);
-  if (!result?.[key]) return false;
-  await storage.remove(key);
-  return true;
 }
 
 // 读取右键菜单写入的临时文本, 读取后立即清除, 避免污染下次打开
@@ -203,7 +190,7 @@ async function loadImageDataUrl(imageUrl: string): Promise<string> {
   }
 }
 
-// PDF 查看器等页面没有内容脚本, 改为截取当前视口识别
+// 本地图片无法直接读取时, 截取当前标签页可见区域
 function captureVisibleTab(): Promise<string> {
   return browser.runtime
     .sendMessage({ action: 'captureVisibleTab' })
@@ -211,14 +198,6 @@ function captureVisibleTab(): Promise<string> {
       if (response?.success && response.dataUrl) return response.dataUrl;
       throw new Error(response?.error || t('screenshotFailedMsg'));
     });
-}
-
-function startCapture() {
-  if (scanning) return;
-  scanning = true;
-  scanActive.value = true;
-  prepareScanView();
-  void decodeAndShow(captureVisibleTab, t('screenshotFailed'));
 }
 
 function prepareScanView() {
@@ -252,12 +231,6 @@ function onStorageChanged(
   areaName: string,
 ) {
   if (areaName !== storageAreaName()) return;
-  // PDF 等页面要求截取当前视口
-  if (changes[CAPTURE_KEY]?.newValue) {
-    startCapture();
-    void storageArea().remove(CAPTURE_KEY);
-    return;
-  }
   // 非 HTML 页面传入的图片地址优先处理
   const imageUrl = changes[QR_IMAGE_KEY]?.newValue;
   if (typeof imageUrl === 'string' && imageUrl) {
@@ -272,39 +245,17 @@ function onStorageChanged(
   }
 }
 
-// 判断标签页是否为 PDF 文档; 浏览器内置 PDF 查看器页面无法注入内容脚本
-function isPdfUrl(url?: string): boolean {
-  if (!url) return false;
-  try {
-    return new URL(url).pathname.toLowerCase().endsWith('.pdf');
-  } catch {
-    return false;
-  }
-}
-
 // Popup 挂载后开始工作
 onMounted(async () => {
   // 先监听, 再解析, 以覆盖 background 稍后写入的竞态
   browser.storage.onChanged.addListener(onStorageChanged);
-  if (await takeStoredFlag(CAPTURE_KEY)) {
-    startCapture();
-    return;
-  }
   const imageUrl = await takeStoredImageUrl();
   if (imageUrl) {
     startScan(imageUrl);
     return;
   }
 
-  // 直接点击工具栏图标时, 若当前是 PDF 页面则提供“识别当前视口”入口
-  const hashText = new URLSearchParams(location.hash.slice(1)).get('text');
-  if (!hashText) {
-    const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
-    if (isPdfUrl(tab?.url)) {
-      pdfMode.value = true;
-      return;
-    }
-  }
+  // 左键点击工具栏图标始终执行默认操作: 生成当前页面地址的二维码
   render(await resolveQrText());
 });
 
@@ -381,16 +332,10 @@ function generateQRCode(text: string) {
 
 <template>
   <div
-    v-if="hasQrContent && !notifyState.open && !pdfMode && !scanActive"
+    v-if="hasQrContent && !notifyState.open && !scanActive"
     id="qrcode-container"
     class="bg-slate-50 border border-slate-200 rounded-lg shadow-sm"
   ></div>
-  <div v-if="!notifyState.open && pdfMode && !scanActive" class="pdf-scan">
-    <p class="pdf-scan-hint">{{ t('pdfScanHint') }}</p>
-    <button type="button" class="pdf-scan-button" @click="startCapture">
-      {{ t('pdfScanButton') }}
-    </button>
-  </div>
   <NotifyHost embedded />
 </template>
 
@@ -405,36 +350,6 @@ body {
   min-height: 100vh;       /* 占满视口高度 */
   justify-content: center; /* 水平居中 */
   align-items: center;     /* 垂直居中 */
-}
-
-.pdf-scan {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  width: 220px;
-  padding: 12px;
-  box-sizing: border-box;
-}
-
-.pdf-scan-hint {
-  margin: 0;
-  font-size: 12px;
-  line-height: 1.5;
-  color: #475569;
-}
-
-.pdf-scan-button {
-  padding: 8px 10px;
-  font-size: 13px;
-  color: #fff;
-  background: #2563eb;
-  border: 0;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.pdf-scan-button:hover {
-  background: #1d4ed8;
 }
 </style>
 

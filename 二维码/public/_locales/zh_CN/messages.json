@@ -23,14 +23,6 @@
     "message": "扫描 SVG 二维码/条形码",
     "description": "右键菜单项：识别直接打开的 SVG 文档中的二维码或条形码"
   },
-  "pdfScanButton": {
-    "message": "扫描当前视口二维码/条形码",
-    "description": "Popup 按钮：截图识别 PDF 当前可见区域中的二维码或条形码"
-  },
-  "pdfScanHint": {
-    "message": "检测到 PDF 页面。请先把二维码或条形码滚动到可见区域并适当放大，再点击下方按钮。",
-    "description": "Popup 提示：PDF 页面的截图识别说明"
-  },
   "screenShot": {
     "message": "截图识别二维码/条形码",
     "description": "右键菜单项：截图识别二维码或条形码"

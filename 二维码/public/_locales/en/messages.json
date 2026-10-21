@@ -23,14 +23,6 @@
     "message": "Scan QR Code or Barcode in This SVG Page",
     "description": "Context menu item for recognizing QR code in an SVG document opened directly"
   },
-  "pdfScanButton": {
-    "message": "Scan QR Code or Barcode in View",
-    "description": "Popup button for scanning the visible area of a PDF page"
-  },
-  "pdfScanHint": {
-    "message": "PDF detected. Scroll the QR code or barcode into view and zoom in, then click the button below.",
-    "description": "Popup hint explaining how to scan a QR code in a PDF"
-  },
   "screenShot": {
     "message": "Take a Screenshot to Scan QR Code or Barcode",
     "description": "Context menu item for taking screenshot to recognize QR code"
