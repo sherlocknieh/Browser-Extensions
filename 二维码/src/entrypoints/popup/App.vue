@@ -137,11 +137,16 @@ async function decodeAndShow(getDataUrl: () => Promise<string>, errorTitle: stri
       showCloseButton: true,
     });
     if (response.dismiss === 'extra') {
-      // 截取当前标签页可见区域重试; popup 不会出现在截图中
-      await decodeAndShow(captureVisibleTab, t('screenshotFailedMsg'));
+      // popup 不是页面浮层: 交给内容脚本在页面内框选;
+      // 内容脚本不可用 (如 Firefox 的 PDF 阅读器) 时, 由后台截取视口后在新标签页中框选
+      const result = await browser.runtime
+        .sendMessage({ action: 'requestScreenshot' })
+        .catch(() => undefined as { success?: boolean } | undefined);
+      if (result?.success) window.close();
       return;
     }
-    if (response.dismiss === 'close') window.close();
+    // 确认/取消/关闭后 popup 已无内容, 需一并收起窗口; 被新通知替换时保持打开
+    if (response.dismiss !== 'replaced') window.close();
     return;
   }
 

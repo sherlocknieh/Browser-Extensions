@@ -113,7 +113,7 @@ export default defineBackground(() => {
     // Firefox 浏览器内置 PDF 阅读器页面无法注入内容脚本, 此时截取当前视口,
     // 再在新标签页中框选识别
     const CAPTURE_IMAGE_KEY = 'qrCaptureImage';
-    const showCropScan = async (windowId?: number) => {
+    const showCropScan = async (windowId?: number): Promise<boolean> => {
         try {
             const dataUrl = windowId == null
                 ? await browser.tabs.captureVisibleTab({ format: 'png' })
@@ -121,6 +121,7 @@ export default defineBackground(() => {
             // 截图体积较大, 交给扩展页面读取后立即清除
             await storageArea().set({ [CAPTURE_IMAGE_KEY]: dataUrl });
             await browser.tabs.create({ url: browser.runtime.getURL('/capture.html') });
+            return true;
         } catch (error) {
             await showPopupNotification({
                 options: {
@@ -131,6 +132,7 @@ export default defineBackground(() => {
                     showCloseButton: true,
                 },
             });
+            return false;
         }
     };
 
@@ -351,14 +353,20 @@ export default defineBackground(() => {
                 .catch(error => sendResponse({ success: false, error: error?.message ?? String(error) }));
             return true;
         }
-        // popup 点击"改用截图识别"后, 让当前页面的内容脚本开始区域截图
+        // popup 点击"改用截图识别"后, 让当前页面的内容脚本开始区域截图;
+        // 纯 SVG 等无法注入内容脚本的页面改为截取视口后在新标签页框选识别
         if (request.action === "requestScreenshot") {
             browser.tabs.query({ active: true, currentWindow: true })
-                .then(([tab]) => {
+                .then(async ([tab]) => {
                     if (tab?.id == null) throw new Error('No active tab.');
-                    return browser.tabs.sendMessage(tab.id, { action: "screenshotQR" });
+                    try {
+                        await browser.tabs.sendMessage(tab.id, { action: "screenshotQR" });
+                        return true;
+                    } catch {
+                        return showCropScan(tab.windowId);
+                    }
                 })
-                .then(() => sendResponse({ success: true }))
+                .then(success => sendResponse({ success }))
                 .catch(() => sendResponse({ success: false }));
             return true;
         }
