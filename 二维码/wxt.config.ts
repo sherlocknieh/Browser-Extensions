@@ -27,6 +27,7 @@ export default defineConfig({
   manifest: {
     name: '__MSG_appName__',
     description: '__MSG_appDescription__',
+    version: '1.4.2',
     default_locale: 'en',
     author: 'sherlocknieh@gmail.com' as unknown as { email: string },
     homepage_url: 'https://github.com/sherlocknieh/Browser-Extensions',

@@ -1,8 +1,5 @@
 {
-  "name": "qrcode",
-  "version": "1.4.1",
   "type": "module",
-  "private": true,
   "scripts": {
     "dev": "wxt",
     "dev:firefox": "wxt -b firefox --mv3",
